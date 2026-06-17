@@ -1,0 +1,19 @@
+{
+  "name": "fable-it",
+  "description": "Autonomous delivery orchestrator for Claude Code. Invoke with a goal and a numbered Definition of Done; it runs the whole job to completion by conducting the bundled launch, iterate, full-qa and chrome-cdp-control skills, enforcing an autonomous posture, a pre-grounding gate, three coherence guardrails, and an honest per-criterion status report.",
+  "version": "0.1.0",
+  "author": {
+    "name": "DevOtts",
+    "url": "https://github.com/DevOtts"
+  },
+  "homepage": "https://github.com/DevOtts/fable-it",
+  "repository": "https://github.com/DevOtts/fable-it",
+  "license": "MIT",
+  "keywords": [
+    "autonomous",
+    "orchestrator",
+    "agents",
+    "definition-of-done",
+    "workflow"
+  ]
+}
