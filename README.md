@@ -1,36 +1,86 @@
-# fable-it
+<div align="center">
 
-**Hand Claude a goal and a numbered Definition of Done. Go to sleep. Wake up to a report.**
+<h1>/fable-it</h1>
 
-fable-it is a Claude Code plugin that turns Claude into an autonomous overnight delivery engine. It conducts your existing build tools — `/launch`, `/iterate`, `/full-qa`, `/chrome-cdp-control` — enforces a pre-grounding gate, three coherence guardrails, and leaves an honest per-criterion status report instead of a faked green one.
+<h3>
+  <strong>Make Opus behave like Fable</strong>
+</h3>
 
-> **fable it. ship it.**
-> Claude should work while you sleep, not ask permission.
+<p>
+  Hand Claude a goal and a numbered Definition of Done.<br>
+  <strong>Go to sleep. Wake up to an honest report.</strong>
+</p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Works with Claude Code](https://img.shields.io/badge/Works%20with-Claude%20Code-orange?logo=anthropic)](https://claude.ai/code)
-[![Plugin](https://img.shields.io/badge/type-plugin-blueviolet)](https://github.com/DevOtts/fable-it)
-[![Author: DevOtts](https://img.shields.io/badge/author-DevOtts-181717?logo=github)](https://github.com/DevOtts)
+<p>
+  <em>Behavior transfers. That's what makes overnight jobs survivable.</em>
+</p>
 
-[Quick Start](#install) · [How it works](#how-it-works) · [Skills bundled](#whats-bundled) · [Invocation](#invocation) · [License](#license)
 
----
+<a href="#how-it-works">
+  <img src="assets/fable-it-header.gif" alt="fable-it process flow — goal, DoD, autonomous run, honest report" width="100%">
+</a>
+
+<p>
+  <a href="#install"><img src="https://img.shields.io/badge/Quick%20Start-Install-blue?style=for-the-badge" alt="Quick Start"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT"></a>
+  <a href="https://claude.ai/code"><img src="https://img.shields.io/badge/Works%20with-Claude%20Code-orange?style=for-the-badge&logo=anthropic" alt="Works with Claude Code"></a>
+  <a href="https://claude.ai/code"><img src="https://img.shields.io/badge/runs%20on-Opus-blueviolet?style=for-the-badge" alt="Runs on Opus"></a>
+  <a href="https://github.com/DevOtts"><img src="https://img.shields.io/badge/author-DevOtts-181717?style=for-the-badge&logo=github" alt="Author: DevOtts"></a>
+</p>
+
+
+<p>
+  <a href="#install">Install</a>
+  &nbsp;·&nbsp;
+  <a href="#the-honest-claim">The honest claim</a>
+  &nbsp;·&nbsp;
+  <a href="#how-it-works">How it works</a>
+  &nbsp;·&nbsp;
+  <a href="#whats-bundled">What's bundled</a>
+  &nbsp;·&nbsp;
+  <a href="#what-the-report-looks-like">The report</a>
+</p>
+
+
+> [!NOTE]
+> **Optimized for long tasks** — research, browser tasks and mainly **vibe coding**.
+
+<br>
+</div>
+
+When you watch Fable run a long, multi-step task, the thing that stands out isn't raw cleverness. It's that it **holds the thread**: it doesn't contradict a decision it made an hour ago, it tests its own work before claiming it's done, it reports honestly when it couldn't verify something, and it doesn't wander off building things you never asked for.
+
+That's *behavior*, not IQ — and behavior transfers. fable-it packs those behaviors into a single Claude Code skill, so Opus runs long, unattended jobs the way Fable does.
+
+## The honest claim
+
+It does **not** turn Opus into Fable, and anyone who tells you a skill can do that is selling something. It makes Opus **behave** like Fable on long work — which is most of what you actually felt when you used Fable.
+
+| Ports to Opus ✓ | Stays with Fable ✕ |
+|---|---|
+| Coherence across a long run, holding early constraints | Raw reasoning ceiling on genuinely hard problems |
+| Self-verification before declaring a step done | One-shotting a complex system from a thin prompt |
+| Honest, evidence-backed progress reporting | The deepest long-context retention quality |
+| Autonomous-turn discipline, no needless pausing | Anything that comes from the weights, not the prompt |
+| Restraint — doing the job, not inventing scope | |
+
+The line is real. But the part that ports over is the part that makes overnight jobs survivable: your Opus runs them far more like Fable than it did yesterday.
 
 ## Install
 
 ```sh
-# 1. Register this marketplace
+# 1. Register the marketplace
 /plugin marketplace add DevOtts/fable-it
 
-# 2. Install the plugin
+# 2. Install the plugin (plugin-name@marketplace-name)
 /plugin install fable-it@devotts
 ```
 
----
+The marketplace name `devotts` comes from the `name` field in [marketplace.json](.claude-plugin/marketplace.json).
 
 ## How it works
 
-You hand fable-it a **goal** and a **numbered Definition of Done**. It does the rest.
+You hand fable-it a **goal** and a **numbered Definition of Done**. It does the rest — unattended.
 
 ```
 Goal: Ship the Shopify → Postgres sync for the analytics dashboard.
@@ -42,61 +92,52 @@ DoD:
 4. All three pass in the QA report
 ```
 
-fable-it then runs **six steps** unattended:
+fable-it is a **conductor, not a replacement**. If you already run Claude Code with skills like `/launch`, `/iterate`, `/full-qa` and `/chrome-cdp-control`, it routes each piece of work to the right one at the right moment — and never pastes a worse copy of their logic. Improve `/iterate`, and fable-it inherits the improvement.
 
-| Step | What happens |
-|------|-------------|
-| **0 — Lock the DoD** | Restructures vague criteria into individually testable items |
-| **1 — Autonomous posture** | Proceeds without asking; never takes irreversible actions without prior authorization |
-| **2 — Pre-grounding gate** | Reads the real source of truth before writing a line of code |
-| **3 — Approach** | Delegates environment setup and agent topology to `/launch` |
-| **4 — Guardrails** | Shared decision contract · interface file · honest status per criterion |
-| **5 — Cycles** | Routes each DoD item to `/iterate`, `/full-qa`, or `/chrome-cdp-control` by shape |
-| **6 — Report** | VERIFIED / IMPLEMENTED-NOT-VERIFIED / BLOCKED — with evidence, never assumptions |
+![fable-it process flow diagram](assets/fable-it-flow.png)
 
-The coherence problem on long overnight jobs is not raw capability — it is decisions made in hour 1 contradicting work done in hour 3. The guardrails exist for that.
 
----
+On top of routing, it enforces the layer that otherwise gets hand-written into every overnight prompt:
 
-## Invocation
+- **Autonomous posture** — keeps moving instead of stopping to ask permission, clamped by two counter-rules: don't fake confidence, don't gold-plate. Irreversible actions still need prior authorization.
+- **Pre-grounding gate** — reads the real source of truth (the actual schema, the real endpoint) *before* writing a line of code, so hour-3 work doesn't drift from hour-1 reality.
+- **Three coherence guardrails** that stop long, parallel runs from quietly falling out of sync:
+  1. **Shared decision contract** — parallel agents read and write one shared file for every cross-cutting decision, so a renderer is never built for schema A while a connector saves schema B.
+  2. **Cross-session interface file** — when this run assumes work another session is still building, it writes the contract both sides agree on instead of guessing.
+  3. **Honest per-criterion status** — every DoD item gets a state with evidence: `VERIFIED`, `IMPLEMENTED-NOT-VERIFIED`, or `BLOCKED`. No green result is ever reported off a mock or an assumption.
 
-fable-it **auto-activates** from context. You do not need to type a command. It fires when you describe a goal-to-DoD delivery:
+The coherence problem on long jobs isn't raw capability — it's decisions made in hour 1 contradicting work done in hour 3. The guardrails exist for exactly that.
 
-> *"I'm going to bed, finish this"*
-> *"green light, take decisions"*
-> *"run to DoD"*
-> *"work autonomously until done"*
-> *a goal + numbered acceptance criteria*
+## Use
 
-To invoke it explicitly (namespaced by the Claude Code plugin system):
+You don't have to type a command — the skill **auto-activates** when you describe a goal-to-DoD delivery:
+
+> *"work autonomously until done"* · *"I'm going to bed, finish this"* · *"run to DoD"* · *"green light, take decisions"* · or a goal followed by numbered acceptance criteria.
+
+To invoke it explicitly (plugin skills are namespaced by the plugin name):
 
 ```
-/fable-it:fable-it
-
-Goal: <your goal>
-
-DoD:
-1. ...
-2. ...
+/fable-it:fable-it Build the Shopify multi-store connector.
+  DoD:
+  1. Backfill shows all records in connector-logs
+  2. Pooling enabled in UI, records appear in logs
+  3. New interactions visible on the timeline page
+  4. ShopifyRenderer shows details for a clicked item
 ```
 
-Only `goal` and `DoD` are required. Paths, credentials, scope fence, and registry all have defaults.
-
----
+Only two things are required: the **goal** and a **numbered DoD**. Everything else has a sensible default — credentials, tooling inferred from the DoD, parallelism, report location. It's built to run unattended: a long silence means it's working, not stuck.
 
 ## What's bundled
 
 | Skill | Role |
 |-------|------|
-| `fable-it` | The orchestrator — owns posture, guardrails, and the final report |
+| `fable-it` | The conductor — owns posture, guardrails, and the final report |
 | `launch` | Mission control: environment inventory, approach selection, agent topology |
 | `iterate` | Diagnosis → fix → test → evaluate cycles |
 | `full-qa` | Autonomous QA suite: reads a test plan, runs CDP + iterate, produces a pass/fail report |
-| `chrome-cdp-control` | Step-by-step control of the user's real Chrome via Playwright over CDP |
+| `chrome-cdp-control` | Step-by-step control of your real, logged-in Chrome via Playwright over CDP |
 
-fable-it is a conductor, not a monolith. It calls these skills by name. If one is missing, it degrades and runs that phase inline — it notes which skill was absent in the final report.
-
----
+Because the skills it delegates to ship inside the plugin, there are no missing dependencies. And if a delegated skill is absent in some environment, fable-it **degrades gracefully** — it runs that phase inline and notes the absence in its report, rather than failing.
 
 ## What the report looks like
 
@@ -116,13 +157,27 @@ Run window: 02:14 → 05:47  |  Approach: single session
 - Restart the dashboard service and re-run /full-qa for criterion 3
 ```
 
-VERIFIED means real data, real endpoint, real evidence. Never a mock dressed up as a pass.
+`VERIFIED` means real data, a real endpoint, real evidence — never a mock dressed up as a pass.
 
----
+## Status
+
+Honest, like the skill itself: this has been tabletop-tested against real prompts, not yet hammered end-to-end in every environment. Validate the plugin locally before relying on it:
+
+```sh
+claude plugin validate ./plugins/fable-it
+claude plugin validate .
+```
 
 ## License
 
-MIT — see [`plugins/fable-it/.claude-plugin/plugin.json`](plugins/fable-it/.claude-plugin/plugin.json).
+MIT — see [plugin.json](plugins/fable-it/.claude-plugin/plugin.json). Use it, fork it, ship with it.
+
+---
+
+Thank you for contribution:
+- [andre2654](https://github.com/andre2654)
+- [mBidarra](https://github.com/mBidarra)
+- [her0 Studio](https://github.com/her0-studio/)
 
 ---
 
