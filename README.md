@@ -78,6 +78,12 @@ The line is real. But the part that ports over is the part that makes overnight 
 
 The marketplace name `devotts` comes from the `name` field in [marketplace.json](.claude-plugin/marketplace.json).
 
+Alternatively, install via the skills CLI:
+
+```sh
+npx skills add DevOtts/fable-it
+```
+
 ## How it works
 
 You hand fable-it a **goal** and a **numbered Definition of Done**. It does the rest — unattended.
@@ -168,9 +174,17 @@ claude plugin validate ./plugins/fable-it
 claude plugin validate .
 ```
 
+## Security considerations
+
+- **No secrets are required to install or run the skill.** You supply credentials only for the specific job you ask it to do.
+- It reads `.full.credentials` and `.env` **locally only** — these are never transmitted anywhere and are not committed.
+- Browser automation uses **your own Chrome** via the Chrome DevTools Protocol (CDP) on a local port, reusing your existing logged-in session. fable-it does not store or exfiltrate your cookies or session.
+- Any credential created during a run (e.g. an admin token, a registry login) is **isolated in a dedicated credentials artifact** with rotation notes — never buried inside the prose report.
+- Irreversible actions (dropping tables, force-push, destructive migrations on shared/prod state) always require explicit prior authorization; autonomy covers reversible work only.
+
 ## License
 
-MIT — see [plugin.json](plugins/fable-it/.claude-plugin/plugin.json). Use it, fork it, ship with it.
+MIT — see [LICENSE](LICENSE) and [plugin.json](plugins/fable-it/.claude-plugin/plugin.json). Use it, fork it, ship with it.
 
 ---
 
