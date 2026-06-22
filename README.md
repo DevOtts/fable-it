@@ -21,7 +21,7 @@
 </a>
 
 <p>
-  <a href="#install"><img src="https://img.shields.io/badge/Quick%20Start-Install-blue?style=for-the-badge" alt="Quick Start"></a>
+  <a href="#installation"><img src="https://img.shields.io/badge/Quick%20Start-Install-blue?style=for-the-badge" alt="Quick Start"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT"></a>
   <a href="https://claude.ai/code"><img src="https://img.shields.io/badge/Works%20with-Claude%20Code-orange?style=for-the-badge&logo=anthropic" alt="Works with Claude Code"></a>
   <a href="https://claude.ai/code"><img src="https://img.shields.io/badge/runs%20on-Opus-blueviolet?style=for-the-badge" alt="Runs on Opus"></a>
@@ -30,7 +30,7 @@
 
 
 <p>
-  <a href="#install">Install</a>
+  <a href="#installation">Install</a>
   &nbsp;·&nbsp;
   <a href="#the-honest-claim">The honest claim</a>
   &nbsp;·&nbsp;
@@ -38,7 +38,7 @@
   &nbsp;·&nbsp;
   <a href="#whats-bundled">What's bundled</a>
   &nbsp;·&nbsp;
-  <a href="#what-the-report-looks-like">The report</a>
+  <a href="#platform-compatibility">Platform compatibility</a>
 </p>
 
 
@@ -66,7 +66,19 @@ It does **not** turn Opus into Fable, and anyone who tells you a skill can do th
 
 The line is real. But the part that ports over is the part that makes overnight jobs survivable: your Opus runs them far more like Fable than it did yesterday.
 
-## Install
+## Installation
+
+fable-it ships as both a **Claude Code plugin** and a standard repo-root **`SKILL.md`**, so it installs across the whole agent ecosystem. Pick your tool below.
+
+> [!TIP]
+> **Two universal installers** understand the `SKILL.md` standard and drop fable-it into the right directory for 70+ tools — use these if your agent isn't listed:
+> ```sh
+> npx skills add DevOtts/fable-it -a <agent>   # e.g. -a codex, -a cursor, -a github-copilot ; add -g for global
+> gh skill install DevOtts/fable-it            # GitHub CLI (project or user scope)
+> ```
+> Peek first with `npx skills add DevOtts/fable-it --list`.
+
+### Claude Code  ·  *native, full experience*
 
 ```sh
 # 1. Register the marketplace
@@ -76,13 +88,72 @@ The line is real. But the part that ports over is the part that makes overnight 
 /plugin install fable-it@devotts
 ```
 
-The marketplace name `devotts` comes from the `name` field in [marketplace.json](.claude-plugin/marketplace.json).
+The marketplace name `devotts` comes from the `name` field in [marketplace.json](.claude-plugin/marketplace.json). This is the **only** target that gets the full bundle — the conductor *plus* `launch`, `iterate`, `full-qa` and `chrome-cdp-control`, with slash-command invocation and auto-activation. (Skills-CLI alternative: `npx skills add DevOtts/fable-it -a claude-code`.)
 
-Alternatively, install via the skills CLI:
+### Codex  ·  *OpenAI Codex CLI*
 
 ```sh
-npx skills add DevOtts/fable-it
+npx skills add DevOtts/fable-it -a codex
+# or:  gh skill install DevOtts/fable-it
 ```
+
+Installs to the shared `.agents/skills/fable-it/` that Codex reads. Codex doesn't carry the bundled sibling skills, so fable-it runs the launch/iterate/QA phases **inline** (graceful degradation) — you still get the autonomous posture, pre-grounding gate, coherence guardrails and the honest per-criterion report.
+
+### OpenClaw
+
+```sh
+npx skills add DevOtts/fable-it -a openclaw
+```
+
+Lands in `.openclaw/skills/fable-it/SKILL.md`.
+
+### Cursor
+
+```sh
+npx skills add DevOtts/fable-it -a cursor      # add -g for a global install
+```
+
+Installs into Cursor's `.agents/skills/` and is auto-discovered.
+
+### VS Code + GitHub Copilot
+
+```sh
+npx skills add DevOtts/fable-it -a github-copilot
+# or:  gh skill install DevOtts/fable-it
+```
+
+Copilot auto-discovers skills under `.agents/skills/`.
+
+### Copilot CLI
+
+```sh
+gh skill install DevOtts/fable-it
+# or:  npx skills add DevOtts/fable-it -a github-copilot
+```
+
+### Kiro CLI / IDE
+
+```sh
+gh skill install DevOtts/fable-it
+```
+
+If your Kiro build doesn't yet read the shared skills path, drop the skill in manually:
+
+```sh
+git clone https://github.com/DevOtts/fable-it /tmp/fable-it
+mkdir -p "<kiro-skills-dir>/fable-it" && cp /tmp/fable-it/SKILL.md "<kiro-skills-dir>/fable-it/"
+```
+
+### Others  ·  *OpenCode · Cline · Windsurf · Zed · Gemini CLI · Antigravity · Amp · Warp …*
+
+```sh
+npx skills add DevOtts/fable-it -a <agent>
+```
+
+Run `npx skills add DevOtts/fable-it --list`, then target your agent — the CLI knows the correct path for each. **Manual fallback for any tool:** clone the repo and copy the root [`SKILL.md`](SKILL.md) into your agent's skills/instructions directory.
+
+> [!NOTE]
+> On every target **except Claude Code**, fable-it installs as a single behavior skill (the root `SKILL.md`). The delegated `/launch`, `/iterate`, `/full-qa` and `/chrome-cdp-control` are Claude Code plugin skills; elsewhere fable-it executes those phases inline and notes the absence in its report. The thing that ports everywhere is the **behavior** — and that's the whole point.
 
 ## How it works
 
@@ -181,6 +252,35 @@ claude plugin validate .
 - Browser automation uses **your own Chrome** via the Chrome DevTools Protocol (CDP) on a local port, reusing your existing logged-in session. fable-it does not store or exfiltrate your cookies or session.
 - Any credential created during a run (e.g. an admin token, a registry login) is **isolated in a dedicated credentials artifact** with rotation notes — never buried inside the prose report.
 - Irreversible actions (dropping tables, force-push, destructive migrations on shared/prod state) always require explicit prior authorization; autonomy covers reversible work only.
+
+## Platform compatibility
+
+fable-it is a `SKILL.md` at its core, so it runs anywhere the open [Agent Skills](https://github.com/vercel-labs/skills) standard does. **Claude Code** gets the full plugin (conductor **+** the four bundled skills); every other tool gets the portable **behavior layer** — posture, pre-grounding gate, guardrails and honest report — with the delegated phases running inline.
+
+Every `skills add -a <agent>` row below is shorthand for `npx skills add DevOtts/fable-it -a <agent>` (append `-g` for a global install). Don't see your tool? Run `npx skills add DevOtts/fable-it --list` — the CLI supports 70+ agents.
+
+| Platform | Status | Install Method |
+|----------|--------|----------------|
+| Claude Code | ✅ Native | Plugin marketplace |
+| Cursor | ✅ Supported | Auto-discovery |
+| VS Code + GitHub Copilot | ✅ Supported | Auto-discovery |
+| Copilot CLI | ✅ Supported | `gh skill install` |
+| Codex | ✅ Supported | `skills add -a codex` |
+| OpenCode | ✅ Supported | `skills add -a opencode` |
+| OpenClaw | ✅ Supported | `skills add -a openclaw` |
+| Antigravity | ✅ Supported | `skills add -a antigravity` |
+| Gemini CLI | ✅ Supported | `skills add -a gemini-cli` |
+| Pi Agent | ✅ Supported | `skills add -a pi` |
+| Vibe CLI | ✅ Supported | `skills add -a mistral-vibe` |
+| Hermes | ✅ Supported | `skills add -a hermes-agent` |
+| Cline | ✅ Supported | `skills add -a cline` |
+| KIMI CLI | ✅ Supported | `skills add -a kimi-code-cli` |
+| Trae | ✅ Supported | `skills add -a trae` |
+| Nanobot | ✅ Supported | Manual — copy `SKILL.md` |
+| Kiro CLI / IDE | ✅ Supported | `skills add -a kiro-cli` |
+| Windsurf · Zed · Amp · Warp · Roo · Goose · Junie · Qwen · …50+ more | ✅ Supported | `npx skills add DevOtts/fable-it --list` |
+
+**Legend** — **✅ Native:** the complete plugin (conductor + all four bundled skills, slash-command + auto-activation). **✅ Supported:** the root `SKILL.md` behavior layer installs and runs; Claude-specific delegated skills execute inline rather than being routed.
 
 ## License
 
