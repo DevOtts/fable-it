@@ -9,7 +9,7 @@ homepage: https://github.com/DevOtts/fable-it
 repository: https://github.com/DevOtts/fable-it
 metadata:
   platforms: [claude-code, cursor, openclaw, mcp, openai]
-  category: Agents & Orchestration
+  category: "Agents & Orchestration"
 keywords: [autonomous, orchestrator, agents, definition-of-done, workflow, claude-code]
 ---
 
