@@ -1,0 +1,13 @@
+# fable-it run artifacts (generated per run — never commit)
+FABLE-IT-REPORT.md
+SKILL-PUBLISH-REPORT.md
+.taskstate/
+*.credentials
+.full.credentials
+
+# Environment / secrets
+.env
+.env.*
+
+# OS / editor cruft
+.DS_Store
