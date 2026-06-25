@@ -47,7 +47,7 @@ Only two fields are required. Everything else has a default so the user does not
 - `credentials` — default: read `.full.credentials` first, then `.env`. If a token must be created (e.g. Shopify admin, a registry login), create it via `/chrome-cdp-control` against the already-logged-in session and record it in the credentials artifact.
 - `scope fence` — what to explicitly NOT touch this session. Default: nothing fenced, but honor any "don't cover X" the goal states.
 - `registry` — default: `github.com/Engine-HQ` with the user's admin token; fallback `ghcr.io/8figureai`.
-- `report location` — default: workspace root.
+- `report location` — default: `.fable-it-reports/` at the workspace root. Create the folder if it does not exist. Keeping every artifact in one folder keeps the repo root clean and lets the user `.gitignore` a single path if they choose.
 - `parallelization` — default: do not ask, infer it (Step 3).
 
 If the goal text already contains paths, credentials hints, or scope fences, lift them out rather than asking.
@@ -165,7 +165,7 @@ Note on harness resilience: model resilience and pipeline resilience are indepen
 
 ## Step 6 — Deliver the artifacts
 
-Two files, both at the report location (default: workspace root). These supersede `/iterate`'s plain final report when running under `/fable-it`.
+Two files, both written to the report location (default: `.fable-it-reports/` at the workspace root — create the folder if it does not exist; never drop these at the repo root). These supersede `/iterate`'s plain final report when running under `/fable-it`. Tell the user the exact paths when you stop, and note that the whole folder can be `.gitignore`d if they prefer not to track it.
 
 **1. The status report** — use this exact structure:
 
@@ -194,7 +194,7 @@ Run window: <start> → <end>   |   Approach: <single / subagents / team>
 - <what to do first on waking up>
 ```
 
-**2. The credentials artifact** — whenever any token, login, or credential was created this run, write a separate file listing every one (service, value, where it is used, how to rotate). These get saved to the user's notes. Never bury created credentials inside prose in the report; isolate them so they are easy to copy.
+**2. The credentials artifact** — whenever any token, login, or credential was created this run, write a separate file (in the same `.fable-it-reports/` folder) listing every one (service, value, where it is used, how to rotate). These get saved to the user's notes. Never bury created credentials inside prose in the report; isolate them so they are easy to copy.
 
 Then stop. Do not append a plan or a "want me to continue?" — Step 1 forbids it.
 

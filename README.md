@@ -202,7 +202,7 @@ To invoke it explicitly (plugin skills are namespaced by the plugin name):
   4. ShopifyRenderer shows details for a clicked item
 ```
 
-Only two things are required: the **goal** and a **numbered DoD**. Everything else has a sensible default — credentials, tooling inferred from the DoD, parallelism, report location. It's built to run unattended: a long silence means it's working, not stuck.
+Only two things are required: the **goal** and a **numbered DoD**. Everything else has a sensible default — credentials, tooling inferred from the DoD, parallelism, report location. The status report and any credentials artifact are written to `.fable-it-reports/` at the workspace root (not the repo root), so the run leaves a clean tree behind — `.gitignore` that one folder if you'd rather not track it. It's built to run unattended: a long silence means it's working, not stuck.
 
 ## What's bundled
 
