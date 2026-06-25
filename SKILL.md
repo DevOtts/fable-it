@@ -48,7 +48,7 @@ npx skills add DevOtts/fable-it
 
 ## Getting started
 
-Give fable-it a goal and a numbered DoD. Everything else has a sensible default — credentials, tooling inferred from the DoD, parallelism, report location.
+Give fable-it a goal and a numbered DoD. Everything else has a sensible default — credentials, tooling inferred from the DoD, parallelism, report location (the status report and any credentials artifact land in `.fable-it-reports/` at the workspace root, which you can `.gitignore` if you'd rather not track them).
 
 ```
 /fable-it Ship the Shopify → Postgres sync for the analytics dashboard.
