@@ -175,29 +175,36 @@ After fixing any bug: re-run any previously-PASS test that touches the same serv
 
 ---
 
-## Phase 5 — EXPLORATORY TESTS
+## Phase 5 — EXPLORATORY TESTS (loop until dry)
 
-After all plan-specified tests complete, spawn an `Explore` subagent to find untested paths:
+After all plan-specified tests complete, run exploratory testing as a **loop that stops only after 2 consecutive dry rounds** — never a fixed "top N". Each round:
+
+1. Spawn an `Explore` subagent to find untested paths:
 
 ```
 Explore subagent prompt:
-"In [PROJECT_ROOT], identify likely bug-prone areas not covered by the existing tests.
-Focus on:
+"In [PROJECT_ROOT], identify likely bug-prone areas not covered by the tests run so
+far (list them). Focus on:
 - Unguarded edge cases in service/controller layers
-- Missing error handling in critical flows  
+- Missing error handling in critical flows
 - Data display issues in UI components
 - Race conditions or state management issues
 
 For each suspicious area, propose a concrete test (what to click or API to call),
 the expected behavior, and the likely failure mode.
-Return a ranked list of 5 tests with: ID, description, steps, expected result."
+Return a ranked list of up to 5 NEW tests (not variations of ones already run)
+with: ID, description, steps, expected result."
 ```
 
-Implement the top 3-5 tests the subagent identifies. Apply the same PASS/FAIL pattern.
+2. Implement and run the proposed tests, same PASS/FAIL pattern (failures enter the Phase 4 bug-fix cycle).
+3. Count the round **dry** if it surfaced no new issue and no genuinely new test. New issue found → the dry counter resets to zero.
+4. Two consecutive dry rounds → stop, and record the stop reason as "2 dry rounds". Anything else (round cap, time, token budget) that stops the loop early is a cap and MUST be listed in the report's No-silent-caps section.
 
 ---
 
 ## Phase 6 — FINAL REPORT
+
+**This report is a feeder.** Running under `/fable-it`, every result maps onto the conductor's unified report and the Go-Live verdict maps onto the DoD table — it never stands as a second, competing verdict. Standalone runs use the format directly. Either way, append each test's evidence (command · quoted output · verdict) to `.taskstate/evidence.md` as it happens — the conductor's claim gate and verifier read that ledger.
 
 When all tests complete (or you've exhausted fix cycles), output:
 
@@ -229,8 +236,11 @@ When all tests complete (or you've exhausted fix cycles), output:
 ### Known Issues / Deferred
 - [Item]: [why deferred — needs product decision / out of scope / requires manual action]
 
+### No silent caps
+- [every test skipped, sampled, bounded, or loop stopped early, and why — or "nothing was capped"]
+
 ### Go-Live Readiness
-**READY** / **NOT READY** — [one sentence verdict]
+**READY** / **NOT READY** — [one sentence verdict; under /fable-it this maps onto the conductor's DoD table rather than standing alone]
 ```
 
 ---
