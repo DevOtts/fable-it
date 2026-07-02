@@ -15,6 +15,15 @@ You are an autonomous project orchestrator. When the user invokes `/launch`, you
 
 ---
 
+## Invocation modes
+
+- **Interactive (default)** — a human ran `/launch` directly. The approval gates in Phase 2 and Phase 4.2 present recommendations and WAIT.
+- **Unattended** — invoked by the `/fable-it` conductor (always) or explicitly flagged `unattended`. Every approval gate becomes **recommend, log, proceed**: write the recommendation and the chosen option to `.taskstate/decisions.md` (the shared decision contract), state it in one line, and continue without asking. An unattended run must reach Phase 4.3 with zero turns spent waiting on a human.
+
+**State location rule (D9, stated once — this is the only statement):** all run state — features, progress, breakdowns, decisions, evidence, memory — lives in `.taskstate/` at the workspace root, versioned per project (e.g. `features-v3.json`). `.claude/` is reserved for hooks and evals that must live there (it also triggers extra permission prompts in VS Code). Every later mention of those files defers to this rule.
+
+---
+
 ## Phase 1 — ANALYZE
 
 Before making any recommendations, gather information. This phase is **read-only**.
@@ -66,7 +75,7 @@ CHECK: CLAUDE.md                             → Existing agent instructions?
 CHECK: .claude/evals/                        → Existing eval scenarios?
 ```
 
-**IMPORTANT — .taskstate/ vs .claude/:** Always save features and progress files to `.taskstate/` at the workspace root (e.g. `/path/to/workspace/.taskstate/`), NOT to `.claude/`. The `.claude/` folder requires extra permission prompts in VS Code; `.taskstate/` does not. Version files by project (e.g. `features-v3.json`, `progress-v3.md`) so past project state is preserved.
+Feature/progress file locations follow the state location rule (top of this file).
 
 Present a summary table:
 
@@ -91,7 +100,7 @@ Present a summary table:
 
 ## Phase 2 — RECOMMEND
 
-Present recommendations to the user. Wait for approval before proceeding to Phase 3.
+Present the recommendations. **Direct human invocation: wait for approval before proceeding to Phase 3. Unattended: do not emit an approval question — log the recommendation + chosen approach to `.taskstate/decisions.md` and proceed straight to Phase 3.**
 
 ### 2.1 Approach Recommendation
 
@@ -305,9 +314,11 @@ Format your recommendation as:
 **Approach:** [single session | sub-agents | agent team (N members)]
 
 ### Team (if applicable)
-- [Role 1]: [responsibility] (Model: Sonnet/Opus)
-- [Role 2]: [responsibility]
+- [Role 1]: [responsibility] (tier: [cheap/mid/top] — [one-line reason])
+- [Role 2]: [responsibility] (tier: …)
 - ...
+
+Tiers come from the **delegation routing rule** — the canonical table in `docs/03-enhancement-spec.md` §4.1 (reference it; never copy it). Gates: default = inherit the session model when unsure; never downgrade the verifier, anything writing to `decisions.md`, or a packet locking an interface others consume; log each tier choice + reason to `.taskstate/run-memory.md`.
 
 ### Tooling Changes
 - [ ] [Install/configure X — reason]
@@ -324,6 +335,8 @@ Format your recommendation as:
 
 Approve this plan to proceed with setup.
 ```
+
+(Unattended: replace the closing line with "Proceeding — plan logged to `.taskstate/decisions.md`.")
 
 ---
 
@@ -363,7 +376,7 @@ Rules:
 - Group by logical area for team assignment
 - Each feature must have a clear test criterion
 
-Save to `.taskstate/features-[version].json` (e.g. `features-v3.json`). NEVER save to `.claude/features.json` — that folder requires permission prompts in VS Code.
+Save to `.taskstate/features-[version].json` (per the state location rule).
 
 ### 3.2 Create progress.md
 
@@ -382,7 +395,7 @@ Save to `.taskstate/features-[version].json` (e.g. `features-v3.json`). NEVER sa
 <!-- Each session adds an entry here -->
 ```
 
-Save to `.taskstate/progress-[version].md` (e.g. `progress-v3.md`). NEVER save to `.claude/progress.md` — that folder requires permission prompts in VS Code.
+Save to `.taskstate/progress-[version].md` (per the state location rule).
 
 ### 3.3 Create init.sh
 
@@ -557,8 +570,8 @@ Template:
 
 ## Quick Start
 - Run `./init.sh` to set up the environment
-- Read `.claude/features.json` for feature list and status
-- Read `.claude/progress.md` for current state
+- Read `.taskstate/features-[version].json` for feature list and status
+- Read `.taskstate/progress-[version].md` for current state
 - Read `[path to PRD]` for the full specification
 
 ## Rules
@@ -566,7 +579,8 @@ Template:
 - Implement the feature, then verify it works
 - Commit after each completed feature with a descriptive message
 - Update progress.md and features.json after each feature
-- Do NOT mark a feature as "pass" without verification
+- A feature's status may move to "pass" only with tool-result evidence from this session (test output, response body, screenshot) appended to `.taskstate/evidence.md` — "should work" is not evidence
+- No unrequested refactors, no speculative abstractions — build the feature the spec asks for, nothing past it
 - If you encounter something surprising, note it here
 
 ## Testing
@@ -614,9 +628,9 @@ I'll now spawn [N] sub-agents to work on these tasks in parallel:
 
 Each sub-agent should:
 1. Read the relevant section of [PRD path]
-2. Implement the feature(s) assigned
+2. Implement the feature(s) assigned — no unrequested refactors, nothing beyond the assigned spec
 3. [If domain skill exists:] Follow the [skill name] skill
-4. Return the results when done
+4. Return the results when done; a feature reports "pass" only with tool-result evidence (test output, response, screenshot) — "should work" is not evidence
 ```
 
 #### For Agent Teams
@@ -630,15 +644,16 @@ Progress: Read [ABSOLUTE_PATH]/.taskstate/progress-[version].md
 
 Team:
 [For each role from the recommendation:]
-- [Role] ([Model]): [Responsibilities]. Work in [file paths].
+- [Role] (tier per the routing rule in `docs/03-enhancement-spec.md` §4.1): [Responsibilities]. Work in [file paths].
 
 Rules:
 - Require plan approval before implementation
 - [Role A] and [Role B] work in parallel on independent features
+- No unrequested refactors, no speculative abstractions — build what the feature spec asks, nothing past it
 - [QA Role] tests every feature after implementation on mobile (375x667) and desktop (1280x720)
-- Only update features.json to "pass" when QA confirms
+- features.json moves to "pass" only when QA confirms with tool-result evidence appended to .taskstate/evidence.md — "should work" is not evidence
 - Commit after each completed feature with descriptive messages
-- Update .claude/progress.md after each feature
+- Update .taskstate/progress-[version].md after each feature
 
 [If domain skill exists:]
 - Follow the [skill name] skill at [path]
@@ -659,9 +674,10 @@ Read the feature list at [ABSOLUTE_PATH]/.taskstate/features-[version].json.
 Run ./init.sh to set up the environment.
 
 Work through features in priority order (respect depends_on chains).
+No unrequested refactors — implement the feature as specified, nothing past it.
 After each feature:
 1. Verify it works [with Playwright if UI task]
-2. Update features.json status to "pass"
+2. Update features.json status to "pass" only with the verification's tool-result evidence appended to .taskstate/evidence.md
 3. Update progress.md
 4. Commit with a descriptive message
 
@@ -671,9 +687,11 @@ Follow the [skill name] skill at [path] for implementation patterns.
 
 ### 4.2 Present and Confirm
 
-Show the composed prompt to the user. Ask:
+**Direct human invocation:** show the composed prompt to the user and ask:
 - "Ready to launch? I'll start with this prompt."
 - Or: "Here's the headless command if you want to run it in the background:"
+
+**Unattended:** do not ask. Log the composed prompt to `.taskstate/decisions.md` and go straight to 4.3.
 
 ```bash
 claude -p "$(cat .claude/prompts/launch-[project].md)" \
@@ -682,7 +700,7 @@ claude -p "$(cat .claude/prompts/launch-[project].md)" \
 
 ### 4.3 Execute
 
-If the user confirms, execute the launch:
+Once cleared (user confirmed, or unattended — already logged in 4.2), execute the launch:
 - For sub-agents: start spawning them
 - For agent teams: create the team with the composed prompt
 - For single session: begin working through features
