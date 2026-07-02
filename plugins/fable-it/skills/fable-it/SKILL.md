@@ -53,7 +53,7 @@ The claim-grounding rule (Anthropic-measured — it "nearly eliminated fabricate
 
 **Optional (assume the default, state the assumption):**
 - `paths` — default: infer from the goal and workspace.
-- `credentials` — default: read `.full.credentials`, then `.env`. Tokens created mid-run go in the credentials artifact (Step 7).
+- `credentials` — default: read `.full.credentials`, then `.env`. Tokens created mid-run go in the credentials artifact (Step 8).
 - `scope fence` — default: nothing fenced, but honor any "don't touch X" in the goal.
 - `report location` — default: `.fable-it-reports/` at the workspace root (create it; keeps the repo root clean and one path `.gitignore`-able).
 - `parallelization` — default: don't ask; infer at Step 3.
@@ -165,7 +165,17 @@ Every status cell obeys the claim gate: VERIFIED rows quote their `evidence.md` 
 
 **Communication register:** written for a teammate waking up and catching up. Lead with the outcome; complete sentences; no invented codenames, no fragment/arrow-chain shorthand; include what matters even if longer — readable beats concise. Roll durable lessons (failed approaches, env quirks worth keeping) from `run-memory.md` into `.fable-it-reports/lessons.md`.
 
-## Step 7 — Deliver the artifacts
+## Step 7 — Verify with fresh eyes (mandatory before delivery)
+
+The draft report never ships unaudited. Self-critique is weaker than fresh eyes: spawn a **fresh-context verifier** subagent (top tier — the never-downgrade list protects it) with exactly this framing:
+
+> You are a fresh-context verifier auditing a delivery report. You have no access to the implementation conversation and must not seek it. Read ONLY these three inputs: (1) the DoD, (2) the draft report, (3) `.taskstate/evidence.md` — never the implementation conversation or the code history. Challenge by default: for every row marked VERIFIED, look up its `evidence.md` entry; CHALLENGE the row if no entry exists, or if the quoted output does not actually demonstrate the criterion (wrong target, mock data, missing assertion). Also flag hedged wording on rows whose ledger evidence is adequate. Return one line per DoD row: CONFIRM or CHALLENGE + reason.
+
+**Reconciliation rule:** every CHALLENGE must be resolved before delivery — either run the real check now and append the ledger entry (row stays VERIFIED with the new evidence), or demote the row to IMPLEMENTED-NOT-VERIFIED. Never ship a challenged row as VERIFIED on the original claim. If you disagree with a challenge, the disagreement and the verifier's verdict are logged in the report — the reader sees both, you don't silently override.
+
+**Degraded protocol (hosts without subagents):** write the audit as a separate pass — state explicitly "setting aside the implementation context", then execute the same checklist under the same reading restriction (only DoD + draft report + `evidence.md`), row by row, recording CONFIRM/CHALLENGE before delivery.
+
+## Step 8 — Deliver the artifacts
 
 Write to the report location (default `.fable-it-reports/`, never the repo root):
 1. **The status report** (Step 6 format) at `.fable-it-reports/report.md`.
