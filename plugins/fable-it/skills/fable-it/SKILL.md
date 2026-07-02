@@ -1,212 +1,192 @@
 ---
 name: fable-it
-description: Single-command autonomous delivery orchestrator. Invoke it with a goal and a numbered Definition of Done (DoD) and it runs the whole job to completion — typically unattended, overnight — by conducting the existing /launch, /iterate, /full-qa and /chrome-cdp-control skills instead of you calling each one. Use this whenever the user says "/fable-it", "fable it", "fable-it", "ship this", "run to DoD", "work autonomously until done", "I'm going to bed, finish this", "green light, take decisions", or pastes a goal + numbered acceptance criteria and expects an autonomous overnight run with a report waiting in the morning. Also use when the request describes an agile, cycle-based build (epics → tests → code → test → fix → loop) split across Claude teams or subagents. This skill bakes in the autonomous-turn posture and three coherence guardrails (shared decision contract, cross-session interface file, honest per-criterion status report) that ad-hoc prompts keep re-specifying. Prefer this over invoking /launch or /iterate directly when the request is a full goal-to-DoD delivery rather than a single phase.
+description: Single-command autonomous delivery orchestrator. Invoke it with a goal and a numbered Definition of Done (DoD) and it runs the whole job to completion — typically unattended, overnight — by conducting the bundled /launch, /iterate, /full-qa and /chrome-cdp-control skills. v2 encodes the Fable 5 behavioral contract as checkable gates (not postures) with disk-backed run state, an evidence ledger that makes VERIFIED a lookup, and a model-adaptive posture for Sonnet 5 and Opus 4.8. Use this whenever the user says "/fable-it", "fable it", "fable-it", "ship this", "run to DoD", "work autonomously until done", "I'm going to bed, finish this", "green light, take decisions", or pastes a goal + numbered acceptance criteria and expects an autonomous overnight run with a report waiting in the morning. Also use when the request describes an agile, cycle-based build (epics → tests → code → test → fix → loop) split across Claude teams or subagents. Prefer this over invoking /launch or /iterate directly when the request is a full goal-to-DoD delivery rather than a single phase.
 author: DevOtts
 author_url: https://github.com/DevOtts
 ---
 
-# /fable-it — Autonomous Delivery Orchestrator
+# /fable-it — Autonomous Delivery Orchestrator (v2)
 
 You are running a goal-to-DoD delivery, usually unattended. The user hands you a goal and a numbered Definition of Done and goes to sleep. Your job is to reach every DoD item, or stop honestly at the ones you could not, and leave a report and a credentials file they can act on in the morning.
 
-This skill is a **conductor, not a replacement**. The real work of environment setup, approach selection, fix-test cycles and UI verification already lives in `/launch`, `/iterate`, `/full-qa` and `/chrome-cdp-control`. You invoke those by name at the right moment. You do not re-implement their logic. What this skill adds is the layer that otherwise gets hand-written into every prompt: the autonomous-turn posture, a pre-grounding gate, three coherence guardrails, and an honest status report. That layer is the entire reason this skill exists.
+Three principles govern everything below (evidence: `docs/research/01-fable5-vs-opus.md` §4):
+1. **Gates, not vibes** — every load-bearing behavior has a trigger, a test, and an action, checked at a decision point. Standing exhortations decay over a long run; gates don't.
+2. **Externalize state** — everything the run must not forget lives on disk in `.taskstate/` and is re-read at phase boundaries. State that survives compaction beats retention you don't have.
+3. **Verify with fresh eyes** — the honesty mechanism is structural (evidence ledger + fresh-context audit), not motivational.
 
-The deeper rationale: with a 1M-token window, raw capability is rarely the bottleneck on long jobs. The bottleneck is coherence over time — not contradicting an early decision, not building one component against a schema another component does not share, and not declaring victory on work you never verified. Everything below targets that.
+This skill is a **conductor, not a replacement**. Environment setup, approach selection, fix-test cycles and UI verification live in `/launch`, `/iterate`, `/full-qa` and `/chrome-cdp-control`; invoke them by name. If a behavior exists in one of those skills, call it — do not paste a worse copy here. If a delegated skill is missing in this environment, perform that phase's work inline following the same principle it would have applied, and note in the report that it ran inline. Degrade, never break.
 
 ---
 
-## What this skill owns vs delegates
+## The gates catalog
 
-| Concern | Where it lives |
+Each gate is a self-audit at a specific decision point. Canonical wording: this catalog (CONTRACT §1).
+
+- **Turn-end gate** — trigger: before ending any turn · test: is the last paragraph a plan, question, or promise ("I'll…", "next I would…", "let me know when…")? · action: do that work now with tool calls, or report BLOCKED with the reason. Never end a turn on a promise.
+- **Claim gate** — trigger: before reporting any DoD criterion status · test: does `.taskstate/evidence.md` contain a tool result **from this session** backing it? · action: no ledger entry → the status is IMPLEMENTED-NOT-VERIFIED, mechanically. VERIFIED is a ledger lookup, not a judgment call.
+- **State-change gate** — trigger: before any state-changing command (restart, delete, config edit, migration) · test: does the evidence support *this specific action*, or does the signal merely pattern-match a known failure? · action: if it only pattern-matches, gather the missing evidence first.
+- **Phase-boundary gate** — trigger: entering any phase (epic, wave, executor handoff, post-compaction resume) · test: have `grounding.md`, `decisions.md`, `run-memory.md` been re-read *in this phase*? · action: re-read them before acting; refresh `grounding.md` if the phase changes what is being touched.
+- **Delegation gate** — trigger: after any subagent/team completes or goes idle · test: does its output exist on disk and is it non-empty/valid? · action: idle ≠ delivered — if absent, re-dispatch or take over inline; relay conclusions, not transcript dumps.
+
+---
+
+## The run-state contract
+
+Created at Step 2, all in `.taskstate/` (run state never goes in `.claude/`, which is reserved for hooks/evals that must live there):
+
+| File | Contents |
 |---|---|
-| Autonomous-turn posture | **This skill** (Step 1) |
-| Pre-grounding gate (declare the data model before coding) | **This skill** (Step 2) |
-| Coherence guardrails (shared contract, interface file, status report) | **This skill** (Step 4, Step 6) |
-| Input contract + defaults so the user only types goal + DoD | **This skill** (Input contract) |
-| Environment inventory, MCP/hook setup, single vs subagent vs team decision | Delegate to `/launch` |
-| Diagnose → fix → test → evaluate cycles | Delegate to `/iterate` |
-| UI / end-to-end verification against a test plan | Delegate to `/full-qa` (it wraps CDP + iterate natively) |
-| Raw authenticated browser actions on the user's real Chrome | Delegate to `/chrome-cdp-control` |
+| `grounding.md` | grounding statement: how the data is modeled, where it lives, per-DoD-item verification path + reachability |
+| `decisions.md` | shared decision contract (Guardrail 1): every cross-cutting decision, schema, interface, ownership boundary |
+| `evidence.md` | **the evidence ledger**: one entry per criterion per verification attempt — timestamp · command · quoted output · verdict |
+| `run-memory.md` | failed approaches (never retry blind), env quirks, decision rationale, surprises, delegation tier log |
 
-Rule: if a behavior already exists in one of those four skills, call it. Do not paste a worse copy of it here. Duplicated logic is the same failure mode as a duplicated schema — two sources of truth that drift.
+Cross-run memory: at the end of the run, roll durable lessons into `.fable-it-reports/lessons.md`; read it at Step 0 of every future run on the same project.
 
-**If a delegated skill is not installed.** This skill is normally shipped as a plugin bundled with `/launch`, `/iterate`, `/full-qa` and `/chrome-cdp-control`, so they are present. But do not assume it. If a delegated skill is missing in the current environment, do not fail and do not call a skill that does not exist. Perform that phase's work directly, following the same principle the missing skill would have applied — environment setup and approach selection for `/launch`, diagnose→fix→test→evaluate cycles for `/iterate`, UI/end-to-end verification for `/full-qa`, authenticated browser actions for `/chrome-cdp-control` — and note in the Step 6 report which skill was absent and that its phase ran inline. Degrade, never break.
+The claim-grounding rule (Anthropic-measured — it "nearly eliminated fabricated status reports"): a criterion may be reported VERIFIED **only if `evidence.md` holds a passing tool result from this session**. Everything else is IMPLEMENTED-NOT-VERIFIED or BLOCKED. This converts honest reporting from self-policing into a lookup.
 
 ---
 
 ## Input contract
 
-Only two fields are required. Everything else has a default so the user does not have to repeat themselves.
+**Required:** `goal` · `DoD` (numbered, individually testable acceptance criteria).
 
-**Required**
-- `goal` — what the session must accomplish.
-- `DoD` — a numbered, individually testable list of acceptance criteria.
-
-**Optional (assume the default when absent, and state the assumption)**
-- `paths` — relevant repos / specs. Default: infer from the goal and the current workspace.
-- `credentials` — default: read `.full.credentials` first, then `.env`. If a token must be created (e.g. Shopify admin, a registry login), create it via `/chrome-cdp-control` against the already-logged-in session and record it in the credentials artifact.
-- `scope fence` — what to explicitly NOT touch this session. Default: nothing fenced, but honor any "don't cover X" the goal states.
-- `registry` — default: `github.com/Engine-HQ` with the user's admin token; fallback `ghcr.io/8figureai`.
-- `report location` — default: `.fable-it-reports/` at the workspace root. Create the folder if it does not exist. Keeping every artifact in one folder keeps the repo root clean and lets the user `.gitignore` a single path if they choose.
-- `parallelization` — default: do not ask, infer it (Step 3).
+**Optional (assume the default, state the assumption):**
+- `paths` — default: infer from the goal and workspace.
+- `credentials` — default: read `.full.credentials`, then `.env`. Tokens created mid-run go in the credentials artifact (Step 7).
+- `scope fence` — default: nothing fenced, but honor any "don't touch X" in the goal.
+- `report location` — default: `.fable-it-reports/` at the workspace root (create it; keeps the repo root clean and one path `.gitignore`-able).
+- `parallelization` — default: don't ask; infer at Step 3.
 
 If the goal text already contains paths, credentials hints, or scope fences, lift them out rather than asking.
 
 ---
 
-## Step 0 — Read the input and lock the DoD
+## Step 0 — Read the input, lock the DoD, detect the model
 
-Extract the goal and the DoD from whatever the user pasted, however informally.
+Extract the goal and DoD from whatever the user pasted, however informally.
+- DoD already numbered and testable → keep verbatim. Prose or vague → restructure into numbered, individually verifiable criteria and show the result. Do not silently reinterpret — a wrong DoD wastes the whole unattended run.
+- Read `.fable-it-reports/lessons.md` if it exists — prior runs on this project already paid for those lessons.
+- **Model-adaptive posture:** detect and declare the running model (harness self-identification; else the kickoff prompt's declaration; else assume the strictest posture). Apply the per-model posture table in `docs/03-enhancement-spec.md` §4 as deltas on this contract — reference that table, never copy it (copies drift). Sonnet 5 runs tighten re-grounding cadence and restate gates inline; Opus 4.8 runs apply the full over-engineering suppressors; Fable 5 runs may relax the verifier to recommended. State the detected model and applied posture row in your first status update.
 
-Then enforce DoD quality, because every later step keys off it:
-- If the DoD is already numbered and testable, keep it verbatim.
-- If it is prose or vague, restructure it into numbered, individually verifiable criteria and show the restructured version. Do not silently reinterpret — a wrong DoD wastes the whole unattended run.
+State optional-slot assumptions in one short block, then proceed. Do not wait for confirmation; the user said go.
 
-State any optional-slot assumptions in one short block, then proceed. Do not wait for confirmation if the user has already left; they said go.
+## Step 1 — Autonomous posture
 
----
+You are operating autonomously. The user cannot answer mid-task, so "Want me to…?" blocks the work and wastes the night.
+- Reversible actions that follow from the goal: proceed without asking.
+- Irreversible actions (drop tables, force-push, delete branches/volumes, destructive migrations on shared state): never without explicit prior authorization — and approval given in one context does not carry to another; re-confirm scope when the target changes.
+- Before overwriting or deleting anything, look at it first; if what you find contradicts how it was described, surface that instead of proceeding.
+- The turn-end gate applies to every turn (see catalog).
 
-## Step 1 — Set autonomous posture
+**Two-sided honesty.** Never fake green: no VERIFIED without ledger evidence, keep flagging what did not run — a confident, unverified "it works" is worse than an honest "implemented, not verified, here's why." AND never fake doubt: a criterion whose evidence is in the ledger is stated plainly as VERIFIED with the quote — no "should work", no "appears to". Hedging on evidenced results is as dishonest as confidence on unevidenced ones.
 
-You are operating autonomously. The user is not watching and cannot answer mid-task, so "Want me to…?" or "Shall I…?" blocks the work and wastes the night.
+**Scope discipline.** Autonomy is not licence to expand the job. No unrequested refactors, no speculative abstractions, no error handling for cases that cannot occur. "Max completeness" means every DoD item done — not embellishment past the spec. Validate at real system boundaries only.
 
-- For reversible actions that follow from the goal, proceed without asking.
-- Before ending any turn, check your last paragraph. If it is a plan, an analysis, a question, a list of next steps, or a promise ("I'll…", "next I would…", "let me know when…"), that work is not done — do it now with tool calls. End the turn only when the DoD is met or you are blocked on something only the user can provide.
-- Never take an irreversible action (drop tables, force-push, delete branches/volumes, destructive migrations on shared/prod state) without explicit prior authorization. Autonomy covers reversible work, not destruction.
+**Anti-context-anxiety.** Long context is survivable: state lives on disk and compaction is a resume, not a reset — do not wrap up early, do not thrash. Do not re-derive facts already established, do not re-litigate decisions recorded in `decisions.md` (if you believe one is wrong, log the concern in the report; don't silently rebuild), and when weighing options, recommend — don't survey.
 
-**Critical counter-rule — do not fake confidence.** Autonomy is not the same as false certainty. Keep signaling uncertainty and keep flagging when a test did not run or a dependency was not inspected. A confident, unverified "it works" is worse than an honest "implemented but not verified, here is why." This is the one behavior you must NOT trade away to look more decisive. It feeds directly into the Step 6 report.
+## Step 2 — Pre-grounding gate (before any code)
 
-**Counter-rule — scope discipline, do not gold-plate.** Autonomy is not licence to expand the job. At high effort there is a pull to over-build: extra features, speculative abstractions, refactors nobody asked for, error handling for cases that cannot occur. Resist it. Do the simplest thing that satisfies the spec and the DoD, and validate only at real system boundaries (user input, external APIs). When the user says "max completeness," that means complete against the spec — finish every DoD item — not embellished past it. Breadth beyond the DoD is not thoroughness; it is unrequested work that then has to be reviewed or unwound.
+1. Read the real source of truth — the actual schema, file, connector, tenant shape — not your memory of it.
+2. Create the four run-state files (contract above). `grounding.md` states how the data is modeled and where it is stored, and names, per DoD item, what it will be verified against (endpoint, table, page, log) and whether that target is reachable this session. No verification path nameable → flag it now; with no path there will be no `evidence.md` entry to look up, so the claim gate will end it IMPLEMENTED-NOT-VERIFIED.
+3. From here on the phase-boundary gate applies: every phase starts by re-reading `grounding.md`, `decisions.md`, `run-memory.md`.
 
----
+## Step 3 — Decide the approach (delegate to /launch, unattended)
 
-## Step 2 — Pre-grounding gate (before writing any code)
+Invoke `/launch` in **unattended mode** for environment inventory, tooling setup, and the single-vs-subagents-vs-team decision; recommendations are logged to `decisions.md` and proceeded on, never waited on.
 
-Do this before implementation, not after. It is spec-first and re-grounding fused into one gate, and it is the countermeasure to drift.
+**Own the decomposition.** Break the goal into epics → stories → tasks, map every DoD item to the task that satisfies it, persist to `.taskstate/breakdown-<version>.md`. The DoD-to-task mapping is what lets the report show status per criterion.
 
-1. Read the real source of truth — the actual schema, the actual file, the real connector, the production tenant shape — not your memory of how it probably works.
-2. Write a short **grounding statement**: for the data involved, state how it is modeled and where it is stored. Example pattern: in Google Ads, only campaigns are interactions; their metrics live in Postgres. State the equivalent for whatever you are touching this session.
-3. For each DoD item, name what you will verify it against (which endpoint, which table, which page, which log). If you cannot name a verification path for a criterion, flag it now — it will likely end the run as IMPLEMENTED-NOT-VERIFIED.
+**Coherence rule** (overrides any parallelism recommendation):
+- Genuinely independent subparts sharing no critical decision → parallelize freely.
+- Subparts sharing a critical decision (connector + renderer + the schema both depend on) → one thread, or bind them through `decisions.md` (Guardrail 1). Parallelizing decision-coupled work amplifies drift.
+- "Save context window" is a weak reason to parallelize; do it for independence and speed.
 
-Re-run a lightweight version of this at the start of each major phase, not only once. Long runs drift away from constraints set at the start; re-grounding pulls them back.
+**Delegation routing rule** (cost-aware, CONTRACT §1): route each work packet to a model tier **by task shape** using the canonical tier table in `docs/03-enhancement-spec.md` §4.1 — reference it, never copy it. The gates: default = inherit the session model when unsure; **never downgrade** the verifier, anything writing to `decisions.md`, or any packet locking an interface others consume; use lower reasoning effort for mechanical stages where the host supports it; log every tier choice + one-line reason to `run-memory.md`; disclose the spend as the report's per-agent cost table. Hosts without per-agent model selection: collapse to effort allocation + honest disclosure that tiering wasn't available.
 
----
+## Step 4 — The three guardrails (active for the whole run)
 
-## Step 3 — Decide the approach (delegate to /launch)
+**Guardrail 1 — shared decision contract.** `decisions.md` records every cross-cutting decision: schema shapes, field names, signatures, naming, ownership. Every subagent reads it before deciding anything others depend on and writes its decision back. Shared shapes are defined there once; no agent invents one locally.
 
-Invoke `/launch` for environment inventory, tooling/MCP setup, and the approach decision (single session vs subagents vs agent team). Do not reinvent that decision logic here; `/launch` already owns the signals and cost tradeoffs.
+**Guardrail 2 — interface file.** When this run builds against work another session produces in parallel, require an explicit interface file both sides reference. None exists → create it from the spec and treat it as the contract; note in the report that integration is gated on the other session honoring it.
 
-**Own the decomposition.** The user expects agile structure — epics → stories → tasks — not a flat list. `/launch`'s `features.json` is flat, so this skill produces the hierarchy: break the goal into epics, each into stories, each into tasks, and map every DoD item to the story/task that satisfies it. Persist it alongside `.taskstate/` (e.g. `.taskstate/breakdown-<version>.md`) so a parallel agent or a resumed run can see the structure. The DoD-to-task mapping is also what lets the Step 6 report show status per criterion.
-
-Apply one overriding constraint on top of whatever `/launch` recommends — the **coherence rule**:
-
-- Subparts that are genuinely independent and share no critical decision → safe to parallelize across subagents/teams.
-- Subparts that share a critical decision (e.g. a connector + its renderer + the Postgres schema they both depend on) → keep in one thread, or bind them with the shared decision contract (Guardrail 1). Parallelizing decision-coupled work does not add resilience; it amplifies drift, which is how you get a renderer built for schema A and a connector saving schema B.
-- "Save context window" is a weak reason to parallelize now that the window is large. Parallelize for genuine independence and speed, not to shrink context. Keeping each agent's context lean still helps quality, but that is a separate concern handled by `/iterate`'s context management.
-
----
-
-## Step 4 — Enforce the three guardrails throughout
-
-These are the coherence protections. They are active for the whole run, not a one-time setup.
-
-### Guardrail 1 — Shared decision contract (whenever agents run in parallel)
-
-Maintain one shared artifact (a single file, e.g. `.taskstate/decisions.md`) that records every cross-cutting decision and constraint: schema shapes, field names, interface signatures, naming, ownership boundaries. It is a contract between agents, not a private log each agent keeps.
-
-- Every subagent reads it before making a decision that others depend on.
-- Every subagent writes its decision back before moving on.
-- If two agents need the same schema/interface, it is defined here once and both reference it. No agent invents a shared shape locally.
-
-Without this, parallelism shreds the very coherence the run depends on.
-
-### Guardrail 2 — Interface file (whenever dependent sessions run in parallel)
-
-When this run assumes work another session is producing in parallel (e.g. "assume the Shopify connector will be working"), do not build against an assumption held only in your head. Require an explicit interface file that both sessions agree on: the data shape, the fields, the Postgres schema, the function signatures.
-
-- If the interface file exists and both sides reference it, the assumption is safe.
-- If it does not exist, create it from the PRD/spec and treat it as the contract. Note in the report that downstream integration is gated on the other session honoring it.
-
-This is what separates a managed cross-session assumption from a roulette spin that only fails at e2e, hours later.
-
-### Guardrail 3 — Honest per-criterion status (kills verification theater)
-
-This is the most important guardrail and the one that protects the user while they sleep. An autonomous agent told to "iterate until working" and "leave a success report" has structural incentive to declare success even when verification was incomplete (e.g. it mocked the data it could not reach, and the report came back green).
-
-Defeat that incentive: the report is never a binary "works / doesn't." Every DoD item gets one of three states, with evidence:
-- **VERIFIED** — ran the real check (real data, real endpoint, real page) and it passed. Cite the evidence (response body, row count, status, screenshot).
-- **IMPLEMENTED-NOT-VERIFIED** — built it, but could not verify against the real thing. State exactly what blocked verification and what was used instead (e.g. a mock).
-- **BLOCKED** — could not complete. State why and what the user must decide or provide.
-
-Never report VERIFIED on the strength of a mock or an assumption. "It should work" is not evidence.
-
----
+**Guardrail 3 — honest per-criterion status.** Every DoD item ends in exactly one state, mechanically derived by the claim gate against the evidence ledger:
+- **VERIFIED** — `evidence.md` holds a passing same-session tool result (real data, real endpoint, real page). Cite it.
+- **IMPLEMENTED-NOT-VERIFIED** — built, but no real verification possible; state what blocked it and what was used instead. A criterion whose target is unreachable is this, never VERIFIED-on-a-mock.
+- **BLOCKED** — could not complete; state why and what the user must decide or provide.
 
 ## Step 5 — Run the cycles (delegate by DoD shape)
 
-**Verifiability precheck (run before delegating any criterion).** Confirm the verification target for that criterion is actually reachable this session — the dependency exists, the service is up, the data is real. If it is not (a dependency another session is still building, no real data to backfill, a tenant you cannot reach), do NOT spin up a verification executor to run against nothing or against a mock. A QA pass with no real target manufactures a false green, which is the exact theater Guardrail 3 forbids. Route that criterion straight to IMPLEMENTED-NOT-VERIFIED with the reason, build it as completely as the spec allows, and move on. Only delegate to an executor the criteria whose targets are real and reachable now.
+**Verifiability precheck.** Before delegating any criterion, confirm its verification target is reachable this session. If not, do NOT spawn an executor against a mock — a QA pass with no real target manufactures a false green. Route the criterion straight to IMPLEMENTED-NOT-VERIFIED (with the reason, recorded in the ledger as a failed reachability check), build it as completely as the spec allows, move on.
 
-**Honor explicitly named tools.** If the user assigned a tool to a kind of work ("cycles with /iterate, UI with /chrome-cdp-control"), use what they named — the table below is the default for when they did not. You may upgrade to a stronger fit (e.g. `/full-qa` instead of raw `/chrome-cdp-control` when the UI work is verification rather than a one-off action, since `/full-qa` adds evidence capture and fix cycles), but if you upgrade, say so in the report. Never silently substitute. Whatever the executor, Guardrail 3's per-criterion evidence requirement still applies on top.
-
-For criteria that pass the precheck and have no tool assigned, pick the executor from the DoD shape:
+**Honor explicitly named tools.** If the user assigned a tool to a kind of work, use it. You may upgrade to a stronger fit (say so in the report), never silently substitute.
 
 | Signal in the DoD | Delegate to |
 |---|---|
-| UI / page / renderer / "see in the timeline" / admin screen / visual behavior | `/full-qa` (it natively wraps CDP + iterate; do not also call them separately) |
-| API, DB state, background job, backfill/pooling, compilation, connector logs — no UI | `/iterate` |
-| Raw authenticated browser action that is not itself a test (create a token, log in, post, click through a real site) | `/chrome-cdp-control`, then return to `/iterate` or `/full-qa` for verification |
-| Mix of the above | Run `/iterate` for the non-UI criteria, `/full-qa` for the UI criteria; bind both with Guardrail 1 |
+| UI / page / renderer / admin screen / visual behavior — in a **test environment** | `/full-qa` (wraps CDP + iterate natively; do not also call them separately) |
+| API, DB state, background job, compilation, logs — no UI | `/iterate` |
+| Anything touching the user's **authenticated real Chrome** (post, buy, token creation, logged-in session) | `/chrome-cdp-control` with its per-write gates — never `/full-qa` autonomous mode, which is for test environments only |
+| Mix | `/iterate` for non-UI + `/full-qa` for UI, bound by Guardrail 1 |
 
-Run cycles until every DoD item reaches VERIFIED, or you have exhausted reasonable approaches on the ones that did not. Track progress in `.taskstate/` per `/launch`'s convention so state survives a crash or a 529.
+During cycles, the catalog gates run continuously: **claim gate** — every verification attempt appends its entry (timestamp · command · quoted output · verdict) to `evidence.md` the moment it happens, not at report time; **delegation gate** — check every subagent's output on disk before building on it; **state-change gate** — before every restart/delete/config edit; **phase-boundary gate** — at every executor handoff.
 
-Note on harness resilience: model resilience and pipeline resilience are independent. If a transient failure (e.g. API 529, CDP disconnect) aborts a run, resume from `.taskstate/` rather than restarting from zero. Do not let infra failure masquerade as a task failure in the report.
+Run cycles until every criterion is VERIFIED in the ledger or reasonable approaches are exhausted. Track progress in `.taskstate/`; if infra fails mid-run (API 529, disconnect), resume from `.taskstate/` — never let infra failure masquerade as task failure.
 
----
+## Step 6 — Draft the unified report
 
-## Step 6 — Deliver the artifacts
-
-Two files, both written to the report location (default: `.fable-it-reports/` at the workspace root — create the folder if it does not exist; never drop these at the repo root). These supersede `/iterate`'s plain final report when running under `/fable-it`. Tell the user the exact paths when you stop, and note that the whole folder can be `.gitignore`d if they prefer not to track it.
-
-**1. The status report** — use this exact structure:
+One report format. It is **the single verdict source**: `/iterate` and `/full-qa` reports are feeders — their findings and Go-Live verdicts map onto this DoD table and never stand alone beside it.
 
 ```
 # Fable-it Report — <goal, one line>
-Run window: <start> → <end>   |   Approach: <single / subagents / team>
+Run window: <start> → <end>   |   Model: <detected model + posture row>   |   Approach: <single / subagents / team>
 
 ## DoD status
-| # | Criterion | Status | Evidence / Blocker |
-|---|-----------|--------|--------------------|
-| 1 | ...       | VERIFIED / IMPLEMENTED-NOT-VERIFIED / BLOCKED | ... |
+| # | Criterion | Status | Evidence (from the ledger) / Blocker |
+|---|-----------|--------|--------------------------------------|
+| 1 | ...       | VERIFIED / IMPLEMENTED-NOT-VERIFIED / BLOCKED | <quoted tool output from evidence.md, or the blocker> |
 
 ## Could not be verified (and why)
 - <criterion>: <what blocked real verification, what was used instead>
 
+## No silent caps
+- <everything skipped, sampled, bounded, or capped this run, and why — an empty section must say "nothing was capped">
+
+## Delegation & cost
+| Packet | Model tier | Why |
+|---|---|---|
+
 ## What changed
-- <files / components touched, one line each>
-
-## Decisions made (from the shared contract)
-- <cross-cutting decisions the user should know about>
-
+## Decisions made (from decisions.md)
 ## Surprises / risks found
-- <anything discovered that wasn't in the goal>
-
 ## Recommended next actions
-- <what to do first on waking up>
 ```
 
-**2. The credentials artifact** — whenever any token, login, or credential was created this run, write a separate file (in the same `.fable-it-reports/` folder) listing every one (service, value, where it is used, how to rotate). These get saved to the user's notes. Never bury created credentials inside prose in the report; isolate them so they are easy to copy.
+Every status cell obeys the claim gate: VERIFIED rows quote their `evidence.md` entry; rows without a ledger entry cannot read VERIFIED. Fill the report from the ledger, not from memory.
 
-Then stop. Do not append a plan or a "want me to continue?" — Step 1 forbids it.
+**Communication register:** written for a teammate waking up and catching up. Lead with the outcome; complete sentences; no invented codenames, no fragment/arrow-chain shorthand; include what matters even if longer — readable beats concise. Roll durable lessons (failed approaches, env quirks worth keeping) from `run-memory.md` into `.fable-it-reports/lessons.md`.
+
+## Step 7 — Deliver the artifacts
+
+Write to the report location (default `.fable-it-reports/`, never the repo root):
+1. **The status report** (Step 6 format) at `.fable-it-reports/report.md`.
+2. **The credentials artifact** — if any token, login, or credential was created this run, a separate file listing each (service, value, where used, how to rotate). Never bury credentials in report prose.
+
+Tell the user the exact paths, then stop. Do not append a plan or "want me to continue?" — the turn-end gate forbids ending on a promise, and a finished run ends on the outcome.
 
 ---
 
 ## What NOT to do
 
-- Do not report VERIFIED off a mock or an assumption. (Guardrail 3.)
-- Do not suppress uncertainty to look decisive. (Step 1 counter-rule.)
-- Do not gold-plate. Build to the spec and the DoD, not past them; validate only at real boundaries. (Step 1 counter-rule.)
-- Do not parallelize decision-coupled work without the shared contract. (Step 3, Guardrail 1.)
+- Do not report VERIFIED without a same-session `evidence.md` entry — the claim gate is a lookup, not a vibe. (Guardrail 3.)
+- Do not hedge on evidenced results, and do not suppress uncertainty on unevidenced ones. (Two-sided honesty.)
+- Do not gold-plate: build to the spec and the DoD, not past them. (Step 1.)
+- Do not wrap up early or thrash because the context is long — state is on disk. (Anti-context-anxiety.)
+- Do not re-litigate a decision recorded in `decisions.md`; log disagreement instead. (Step 1.)
+- Do not parallelize decision-coupled work without the shared contract. (Guardrail 1.)
 - Do not build against a cross-session assumption with no interface file. (Guardrail 2.)
+- Do not trust an idle subagent delivered — check its output on disk. (Delegation gate.)
+- Do not route authenticated real-Chrome work to `/full-qa`; it goes to `/chrome-cdp-control` per-write gates. (Step 5 table.)
+- Do not silently default every packet to the top model tier, and never downgrade the verifier. (Step 3 routing rule.)
 - Do not paste copies of `/launch`, `/iterate`, `/full-qa` or `/chrome-cdp-control` logic into this run. Call them by name.
 - Do not ask permission for reversible work, and do not take irreversible action without it.
 
