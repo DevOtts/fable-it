@@ -11,6 +11,10 @@ You are running an autonomous, project-agnostic QA pipeline. You read a test pla
 
 This skill incorporates Chrome CDP browser control and iterative bug-fix cycles natively. You do not need to invoke `/chrome-cdp-control` or `/iterate` separately.
 
+**CDP mechanics live in one shared reference — read `../references/cdp-core.md`** (relative to this skill's base directory) **before any browser work.** It canonically owns endpoint resolution (`CDP_URL`/`APP_URL` env → grounding/test plan → defaults), the action template, tab selection, the selector ladder, waits, and the failure protocol. Never restate them here; never hardcode a CDP endpoint or app port — parallel runs collide on hardcoded values.
+
+**Route guard (cdp-core.md §9): autonomous mode is for TEST ENVIRONMENTS ONLY.** If any test case targets the user's authenticated real-Chrome session (their logged-in accounts — posting, sending, buying), REFUSE to run that case autonomously and re-route it to `/chrome-cdp-control`, whose per-write gate requires explicit user confirmation for each write. Unattended (user asleep) that case ends as BLOCKED/deferred with the reason. There is no autonomous write path on an authenticated session.
+
 ---
 
 ## Step 0 — INGEST THE TEST PLAN
@@ -49,19 +53,13 @@ Expected: 200 (or the status code the plan specifies). Any non-200 is a failure 
 
 ### 1.2 Chrome CDP check
 
+Resolve the CDP endpoint per cdp-core.md §1 (env `CDP_URL` → grounding/test plan → the core's default), then:
+
 ```bash
-curl -s http://localhost:9222/json/version | python3 -c "import sys,json; d=json.load(sys.stdin); print('Chrome:', d.get('Browser','?'))"
+curl -s "$CDP_URL/json/version" | python3 -c "import sys,json; d=json.load(sys.stdin); print('Chrome:', d.get('Browser','?'))"
 ```
 
-If CDP fails, output exactly this and stop:
-> Chrome isn't running with remote debugging. Please launch it with:
-> ```bash
-> "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
->   --remote-debugging-port=9222 \
->   --user-data-dir="$HOME/.chrome-automation" \
->   --no-first-run &
-> ```
-> Then run /full-qa again.
+If CDP fails, stop and give the user the relaunch instruction from cdp-core.md §2, then say: "Then run /full-qa again."
 
 ### 1.3 Playwright check
 
@@ -76,7 +74,7 @@ Print a compact table before moving on:
 PREFLIGHT
   ✓ Service A  http://localhost:XXXX  200
   ✓ Service B  http://localhost:YYYY  200
-  ✓ Chrome CDP  localhost:9222        Chrome/XXX
+  ✓ Chrome CDP  $CDP_URL              Chrome/XXX
   ✗ Service C  http://localhost:ZZZZ  ECONNREFUSED  ← fixing...
 ```
 
@@ -116,69 +114,15 @@ Use `curl` for REST/GraphQL endpoints and `psql`/`sqlite3`/`mysql` for DB verifi
 
 ### Browser tests (UI interactions)
 
-Use this exact CDP loop. Every browser action follows this 5-step sequence — no exceptions:
+Every browser action follows the 5-step sequence — no exceptions:
 
-**Step 1 — Screenshot** (see current state)
-```bash
-python3 << 'PYEOF'
-import asyncio
-from playwright.async_api import async_playwright
+**Step 1 — Screenshot** (see current state) · **Step 2 — Decide** the single next action · **Step 3 — Execute** one action · **Step 4 — Screenshot again** to verify the expected state · **Step 5 — Repeat** until the scenario completes.
 
-async def go():
-    pw = await async_playwright().start()
-    browser = await pw.chromium.connect_over_cdp('http://localhost:9222')
-    ctx = browser.contexts[0]
-    # Find target tab by URL fragment, never pages[0] blindly
-    page = next((p for p in ctx.pages if "TARGET_FRAGMENT" in p.url), None)
-    if page is None:
-        page = await ctx.new_page()
-        await page.goto("TARGET_URL", wait_until="domcontentloaded", timeout=30000)
-    await page.screenshot(path="/tmp/qa_screenshot.png")
-    print("Current URL:", page.url)
-    await pw.stop()
-
-asyncio.run(go())
-PYEOF
-```
-
-**Step 2 — Decide** what single action to take based on current state.
-
-**Step 3 — Execute** one action (navigate / click / type / evaluate).
-
-**Step 4 — Screenshot again** to verify the action produced the expected state.
-
-**Step 5 — Repeat** until the test scenario is complete.
-
-#### Selector priority (use in this order, never use auto-generated CSS classes):
-1. ARIA role: `page.get_by_role("button", name="Submit")`
-2. Label/placeholder: `page.get_by_label("Email")`, `page.get_by_placeholder("Search...")`
-3. Visible text: `page.get_by_text("Sign in", exact=True)`
-4. Stable data attributes: `page.locator('[data-testid="submit-btn"]')`
-5. Last resort: coordinate click via screenshot analysis
-
-#### Wait strategy (prefer explicit over sleep):
-1. `await page.wait_for_load_state("networkidle")` — after navigation
-2. `await page.wait_for_selector("...", state="visible")` — before interaction
-3. `await page.locator("...").wait_for()` — before reading
-4. `await asyncio.sleep(N)` — only for animations, N < 2
-
-#### Tab selection:
-Always list tabs first to avoid the wrong-tab failure:
-```python
-for i, p in enumerate(ctx.pages):
-    print(i, p.url, "|", await p.title())
-```
-Then match by URL substring. Never close a tab the test plan didn't authorize.
-
-#### Failure protocol for browser actions:
-- Take one more screenshot (page may be mid-render)
-- Try one alternative selector
-- If still failing after 2 attempts: record FAIL, document what was seen vs. expected, continue to next test
-- NEVER loop "click → fail → click → fail" more than twice
+For every step's mechanics use cdp-core.md verbatim: the canonical action template (§4, with `CDP_URL` resolved, never hardcoded), tab selection (§5), the selector ladder (§6), the wait strategy (§7). One QA-specific delta on the core failure protocol (§8): after the 2-attempt limit, record FAIL for the test case, document seen-vs-expected, and continue to the next test rather than stopping the run.
 
 ### Destructive action gate
 
-Before any test step that writes, deletes, posts, sends, submits, or modifies shared state **beyond the test environment**, STOP and confirm with the user. Tests within a local dev environment (localhost) do not require confirmation for write operations.
+Before any test step that writes, deletes, posts, sends, submits, or modifies shared state **beyond the test environment**, STOP and confirm with the user. Tests within a local dev environment (localhost) do not require confirmation for write operations. Authenticated real-Chrome cases never reach this gate: the route guard (top of this file / cdp-core.md §9) already re-routed them to `/chrome-cdp-control`.
 
 ---
 
@@ -358,37 +302,8 @@ cd <project> && python3 -m uvicorn main:app --host 127.0.0.1 --port PORT &
 # Django: python manage.py check; Rails: bin/rails db:migrate:status; Laravel: php artisan migrate:status
 ```
 
-### Chrome CDP (canonical action template)
-```bash
-python3 << 'PYEOF'
-import asyncio
-from playwright.async_api import async_playwright
-
-async def go():
-    pw = await async_playwright().start()
-    browser = await pw.chromium.connect_over_cdp('http://localhost:9222')
-    ctx = browser.contexts[0]
-
-    # List all tabs (always do this first)
-    for i, p in enumerate(ctx.pages):
-        print(i, p.url)
-
-    # Find target tab by URL fragment
-    page = next((p for p in ctx.pages if "TARGET_FRAGMENT" in p.url), None)
-    if page is None:
-        page = await ctx.new_page()
-        await page.goto("TARGET_URL", wait_until="domcontentloaded", timeout=30000)
-
-    # === ONE ACTION HERE ===
-
-    await page.wait_for_load_state("networkidle", timeout=15000)
-    await page.screenshot(path="/tmp/qa_action.png")
-    print("OK:", page.url)
-    await pw.stop()
-
-asyncio.run(go())
-PYEOF
-```
+### Chrome CDP
+The canonical action template lives in `../references/cdp-core.md` §4 — use it as-is.
 
 ---
 _Authored by [DevOtts](https://github.com/DevOtts)._
