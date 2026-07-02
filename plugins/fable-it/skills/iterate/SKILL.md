@@ -37,11 +37,14 @@ Each cycle follows this structure. Run as many cycles as needed.
 
 **Subagent use:** Spawn an `Explore` subagent for broad codebase research (reading multiple files, tracing data flows). Keep your own context for reasoning and decisions.
 
+**Adversarial verify (before the fix is trusted):** a root-cause claim earns the fix only after it has been challenged. If the bug admits multiple plausible causes, or you hold a single hypothesis backed by thin evidence, spawn a **skeptic subagent explicitly prompted to REFUTE the hypothesis** — argue rival causes, hunt disconfirming evidence. Hypothesis survives a real challenge → proceed. Skeptic surfaces a rival → run one targeted check before any fix. Never apply a fix on an unrefuted-but-unchallenged hypothesis.
+
 **Output of this phase:**
 ```
 DIAGNOSIS: <one sentence root cause>
 HYPOTHESIS: <what I believe is happening>
 EVIDENCE: <what confirmed it>
+CHALLENGED: <how the hypothesis was adversarially tested, and the outcome>
 FIX PLAN: <what I'll change>
 ```
 
@@ -72,6 +75,8 @@ Depending on the task type, pick the right verification method:
 | Unit logic | Run the specific test file |
 
 Always collect **concrete evidence** — a response body, a row count, a status value. "It should work" is not evidence.
+
+**Evidence ledger:** append every test result to `.taskstate/evidence.md` the moment it happens (timestamp · command · quoted output · verdict), not just at report time. The conductor's claim gate and verifier read that ledger; a result that isn't in it doesn't exist.
 
 **Subagent use:** For parallel test runs (e.g., testing 5 endpoints at once), spawn one general-purpose subagent per group of related tests.
 
@@ -113,6 +118,16 @@ Use subagents to protect your context window and parallelize independent work:
 - Writing the DIAGNOSIS/RESULT summaries
 - Calling out risks and blockers to the user
 
+### Delegation gate — idle ≠ delivered
+
+After any subagent completes or goes idle, and BEFORE building on its result:
+verify its output actually exists — files changed on disk (check `git status` /
+the target paths), non-empty, matching the assignment. A subagent's "done" claim
+is not delivery. Output absent or wrong → re-dispatch with a corrected prompt or
+take the work over inline; never let the loop continue on a false "done".
+**Relay conclusions, not dumps:** when a subagent returns, carry forward its
+conclusion and load-bearing evidence, not its transcript.
+
 ### Prompt quality for subagents
 
 Always include in subagent prompts:
@@ -143,7 +158,7 @@ Stop iterating and report to the user when:
 
 ## Final Report Format
 
-When the iteration loop completes, deliver:
+**This report is a feeder.** Running under `/fable-it`, its findings flow into the conductor's unified report (statuses derived from the `evidence.md` ledger) — it never stands as a second verdict beside it. Standalone runs use the format directly.
 
 ```
 ## Results
@@ -158,6 +173,9 @@ When the iteration loop completes, deliver:
 
 ### Issues found along the way
 - [any bugs, missing migrations, schema gaps discovered]
+
+### No silent caps
+- [everything skipped, sampled, bounded, or truncated this run, and why — or "nothing was capped"]
 
 ### Remaining items (if any)
 - [what still needs attention and why it wasn't resolved]
