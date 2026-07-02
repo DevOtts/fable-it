@@ -1,7 +1,7 @@
 ---
 name: fable-it
-description: Autonomous goal-to-DoD delivery orchestrator for Claude Code. Hand it a goal and a numbered Definition of Done and it runs the whole job to completion — typically unattended — conducting launch, iterate, full-qa and chrome-cdp-control with an autonomous posture, a pre-grounding gate, three coherence guardrails, and an honest per-criterion report.
-version: 0.1.0
+description: Autonomous goal-to-DoD delivery orchestrator — "Make your model behave like Fable". Hand it a goal and a numbered Definition of Done and it runs the whole job to completion, typically unattended, enforcing checkable gates (turn-end, claim, state-change, phase-boundary, delegation), disk-backed run state, an evidence ledger that makes VERIFIED a lookup, a fresh-eyes verification pass, and an honest per-criterion report. Model-adaptive for Sonnet 5 and Opus 4.8; host-agnostic (Claude Code, Cursor, Codex, Copilot and any SKILL.md-compatible agent).
+version: 2.0.0
 license: MIT
 author: DevOtts
 author_url: https://github.com/DevOtts
@@ -10,65 +10,81 @@ repository: https://github.com/DevOtts/fable-it
 metadata:
   platforms: [claude-code, cursor, openclaw, mcp, openai]
   category: "Agents & Orchestration"
-keywords: [autonomous, orchestrator, agents, definition-of-done, workflow, claude-code]
+keywords: [autonomous, orchestrator, agents, definition-of-done, workflow, claude-code, evidence-ledger]
 ---
 
 # fable-it — Autonomous Delivery Orchestrator
 
-fable-it is a single-command autonomous delivery orchestrator. You hand it a **goal** and a **numbered Definition of Done (DoD)** and it runs the whole job to completion — typically unattended, overnight — leaving an honest report and a credentials file you can act on in the morning.
+**Make your model behave like Fable.** You hand fable-it a **goal** and a **numbered Definition of Done (DoD)**; it runs the whole job to completion — typically unattended, overnight — and leaves an honest, evidence-backed report. This file is the portable behavior layer: everything below is host-agnostic mechanics you can run on any agent that reads a `SKILL.md`. (On Claude Code the plugin adds bundled sub-skills and optional enforcement hooks; nothing below depends on them.)
 
-It is a **conductor, not a replacement**. The real work of environment setup, approach selection, fix-test cycles and UI verification already lives in the bundled `/launch`, `/iterate`, `/full-qa` and `/chrome-cdp-control` skills. fable-it invokes those by name at the right moment instead of re-implementing their logic. What it adds is the layer that otherwise gets hand-written into every overnight prompt:
+Three principles govern the run: **gates, not vibes** (every load-bearing behavior has a trigger, a test, and an action); **externalize state** (everything the run must not forget lives on disk and is re-read at phase boundaries); **verify with fresh eyes** (honesty is structural — a ledger and an audit pass — not motivational).
 
-- **Autonomous posture** — keeps moving instead of pausing to ask permission, clamped by two counter-rules: don't fake confidence, don't gold-plate. Irreversible actions still require prior authorization.
-- **Pre-grounding gate** — reads the real source of truth (the actual schema, the real endpoint) *before* writing a line of code, so hour-3 work doesn't drift from hour-1 reality.
-- **Three coherence guardrails**:
-  1. **Shared decision contract** — parallel agents read and write one shared file for every cross-cutting decision, so a renderer is never built for schema A while a connector saves schema B.
-  2. **Cross-session interface file** — when a run assumes work another session is still building, it writes the contract both sides agree on instead of guessing.
-  3. **Honest per-criterion status** — every DoD item gets a state with evidence: `VERIFIED`, `IMPLEMENTED-NOT-VERIFIED`, or `BLOCKED`. No green result is ever reported off a mock or an assumption.
+## The gates catalog
 
-The bottleneck on long jobs is rarely raw capability — it's coherence over time. Everything above targets that.
+Check each gate at its decision point — they are self-audits, not standing exhortations:
+
+- **Turn-end gate** — trigger: before ending any turn · test: is the last paragraph a plan, question, or promise ("I'll…", "next I would…", "let me know when…")? · action: do that work now, or report BLOCKED with the reason. Never end a turn on a promise.
+- **Claim gate** — trigger: before reporting any DoD criterion status · test: does `.taskstate/evidence.md` contain a tool/command result **from this session** backing it? · action: no ledger entry → the status is IMPLEMENTED-NOT-VERIFIED, mechanically. VERIFIED is a ledger lookup, not a judgment call.
+- **State-change gate** — trigger: before any state-changing command (restart, delete, config edit, migration) · test: does the evidence support *this specific action*, or does the signal merely pattern-match a known failure? · action: if it only pattern-matches, gather the missing evidence first.
+- **Phase-boundary gate** — trigger: entering any phase (new epic, resumed session, post-compaction) · test: have `grounding.md`, `decisions.md`, `run-memory.md` been re-read in this phase? · action: re-read them before acting.
+- **Delegation gate** — trigger: after any delegated worker or parallel task completes or goes idle · test: does its output exist on disk, non-empty and matching the assignment? · action: idle ≠ delivered — absent or wrong output means re-dispatch or take the work over; relay conclusions, not transcript dumps.
+
+## The run-state contract
+
+Create these four files in `.taskstate/` before writing any code, and re-read the first three at every phase boundary:
+
+| File | Contents |
+|---|---|
+| `grounding.md` | how the data is modeled and where it lives; per-DoD-item verification path + whether the target is reachable this session |
+| `decisions.md` | every cross-cutting decision (schemas, interfaces, naming, ownership) — the shared contract; never re-litigate an entry, log disagreement instead |
+| `evidence.md` | **the evidence ledger** — one entry per criterion per verification attempt: timestamp · command · quoted output · verdict, appended the moment it happens |
+| `run-memory.md` | failed approaches (never retry blind), environment quirks, decision rationale, surprises |
+
+Cross-run memory: at the end of a run, roll durable lessons into `.fable-it-reports/lessons.md`; read it at the start of future runs on the same project.
+
+**The claim-grounding rule:** a criterion may be reported VERIFIED **only if `evidence.md` holds a passing result from this session**. Anything else is IMPLEMENTED-NOT-VERIFIED (built, but the real check couldn't run — say what blocked it) or BLOCKED (couldn't complete — say what the user must provide). Never VERIFIED on a mock, an assumption, or memory.
+
+## The run
+
+1. **Lock the DoD.** Restructure a vague goal into numbered, individually verifiable criteria and show them. Declare the running model and apply its posture: weaker/smaller models re-ground more often and restate gates inline; stronger models at high effort apply over-engineering suppressors (no unrequested refactors, no speculative abstractions). Assume the strictest posture when unsure.
+2. **Autonomous posture.** Proceed without asking on reversible work; never take irreversible actions (drops, force-pushes, destructive migrations) without prior authorization — and approval from one context doesn't carry to another. Look before overwriting. Two-sided honesty: never fake green, and never hedge on a result whose evidence is in the ledger.
+3. **Pre-ground.** Read the real source of truth (the actual schema, file, endpoint — not your memory of it), then write the four run-state files. A criterion with no nameable verification path gets flagged now.
+4. **Decompose and route.** Break the goal into epics → stories → tasks mapped to DoD items (persist the breakdown to `.taskstate/`). Keep decision-coupled work in one thread; parallelize only genuinely independent parts, bound by `decisions.md`. Where the host lets you choose worker models, route mechanical work to cheap tiers and judgment/verification to the top tier — never downgrade the verification pass — and log each choice + reason in `run-memory.md`.
+5. **Run the cycles.** Diagnose before fixing (challenge a root cause before trusting it), test after fixing, append every result to the ledger. Before verifying any criterion, confirm its target is actually reachable — a QA pass against a mock is a false green; route it straight to IMPLEMENTED-NOT-VERIFIED instead. Resume from `.taskstate/` after any crash; infra failure is not task failure.
+6. **Verify with fresh eyes, then report.** Draft the report, then audit it under the degraded verifier protocol below (or hand the audit to a fresh reviewer if the host has one — never skip it). Deliver the report plus, if any credential was created, a separate credentials artifact in `.fable-it-reports/`.
+
+## The degraded verifier protocol
+
+Before delivery, audit the draft report as a separate pass. State explicitly: "setting aside the implementation context." Then, reading ONLY the DoD, the draft report, and `.taskstate/evidence.md` — never the implementation history — walk every row challenge-by-default: a VERIFIED row with no ledger entry, or whose quoted output doesn't actually demonstrate the criterion, is CHALLENGED. Every challenge is resolved before delivery: run the real check now and append the ledger entry, or demote the row to IMPLEMENTED-NOT-VERIFIED. Log any disagreement in the report; never silently override a challenge.
+
+## The report
+
+One verdict source. Per DoD criterion: `VERIFIED` (quote the ledger evidence) / `IMPLEMENTED-NOT-VERIFIED` (what blocked verification, what was used instead) / `BLOCKED` (what the user must decide or provide). Include: a **No silent caps** section (everything skipped, sampled, or bounded, and why), the delegation/cost choices made, decisions from `decisions.md`, surprises, and recommended next actions. Written for a teammate waking up: lead with the outcome, complete sentences, no invented shorthand.
 
 ## Install
 
-**Claude Code plugin (recommended)** — installs fable-it together with the four skills it conducts:
+**Claude Code plugin (recommended)** — adds the bundled `/launch`, `/iterate`, `/full-qa` and `/chrome-cdp-control` skills the conductor routes to, plus optional fail-open enforcement hooks:
 
 ```sh
-# 1. Register the marketplace
 /plugin marketplace add DevOtts/fable-it
-
-# 2. Install the plugin (plugin-name@marketplace-name)
 /plugin install fable-it@devotts
 ```
 
-**Via the skills CLI:**
+**Any other agent (Cursor, Codex, Copilot, 70+ tools):**
 
 ```sh
-npx skills add DevOtts/fable-it
+npx skills add DevOtts/fable-it -a <agent>
 ```
 
-## Getting started
-
-Give fable-it a goal and a numbered DoD. Everything else has a sensible default — credentials, tooling inferred from the DoD, parallelism, report location (the status report and any credentials artifact land in `.fable-it-reports/` at the workspace root, which you can `.gitignore` if you'd rather not track them).
-
-```
-/fable-it Ship the Shopify → Postgres sync for the analytics dashboard.
-
-DoD:
-1. Shopify orders sync to postgres.orders with the correct schema
-2. Incremental sync works (only new orders since last run)
-3. Dashboard /analytics page shows real data, not mocks
-4. All three pass in the QA report
-```
-
-It auto-activates on phrases like *"work autonomously until done"*, *"run to DoD"*, *"I'm going to bed, finish this"*, or a goal followed by numbered acceptance criteria. A long silence means it's working, not stuck. When it finishes, you get a per-criterion status report and — if any credential was created during the run — a separate credentials artifact.
+Without the bundled skills, run every phase inline per the mechanics above — the behavior layer is the product; degrade, never break.
 
 ## Security considerations
 
 - **No secrets are required to install or run the skill.** You supply credentials only for the specific job you ask it to do.
-- It reads `.full.credentials` and `.env` **locally only** — these are never transmitted anywhere and are not committed.
-- Browser automation uses **your own Chrome** via the Chrome DevTools Protocol (CDP) on a local port, reusing your existing logged-in session. fable-it does not store or exfiltrate your cookies or session.
-- Any credential created during a run (e.g. an admin token, a registry login) is **isolated in a dedicated credentials artifact** with rotation notes — never buried inside the prose report.
-- Irreversible actions (dropping tables, force-push, destructive migrations on shared/prod state) always require explicit prior authorization; autonomy covers reversible work only.
+- It reads `.full.credentials` and `.env` **locally only** — never transmitted, never committed.
+- Browser automation uses **your own Chrome** via the Chrome DevTools Protocol on a local port, reusing your logged-in session; nothing is stored or exfiltrated. Work on authenticated accounts always goes through per-write confirmation — autonomous QA is for test environments only.
+- Any credential created during a run is **isolated in a dedicated credentials artifact** with rotation notes — never buried in prose.
+- Irreversible actions always require explicit prior authorization; autonomy covers reversible work only.
 
 ---
 _Authored by [DevOtts](https://github.com/DevOtts)._

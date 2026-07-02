@@ -3,7 +3,7 @@
 <h1>/fable-it</h1>
 
 <h3>
-  <strong>Make Opus behave like Fable</strong>
+  <strong>Make your model behave like Fable</strong>
 </h3>
 
 <p>
@@ -24,7 +24,8 @@
   <a href="#installation"><img src="https://img.shields.io/badge/Quick%20Start-Install-blue?style=for-the-badge" alt="Quick Start"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT"></a>
   <a href="https://claude.ai/code"><img src="https://img.shields.io/badge/Works%20with-Claude%20Code-orange?style=for-the-badge&logo=anthropic" alt="Works with Claude Code"></a>
-  <a href="https://claude.ai/code"><img src="https://img.shields.io/badge/runs%20on-Opus-blueviolet?style=for-the-badge" alt="Runs on Opus"></a>
+  <a href="https://claude.ai/code"><img src="https://img.shields.io/badge/tuned%20for-Sonnet%205-blueviolet?style=for-the-badge" alt="Tuned for Sonnet 5"></a>
+  <a href="https://claude.ai/code"><img src="https://img.shields.io/badge/tuned%20for-Opus%204.8-blueviolet?style=for-the-badge" alt="Tuned for Opus 4.8"></a>
   <a href="https://github.com/DevOtts"><img src="https://img.shields.io/badge/author-DevOtts-181717?style=for-the-badge&logo=github" alt="Author: DevOtts"></a>
 </p>
 
@@ -39,6 +40,8 @@
   <a href="#whats-bundled">What's bundled</a>
   &nbsp;·&nbsp;
   <a href="#platform-compatibility">Platform compatibility</a>
+  &nbsp;·&nbsp;
+  <a href="#sources">Sources</a>
 </p>
 
 
@@ -50,21 +53,23 @@
 
 When you watch Fable run a long, multi-step task, the thing that stands out isn't raw cleverness. It's that it **holds the thread**: it doesn't contradict a decision it made an hour ago, it tests its own work before claiming it's done, it reports honestly when it couldn't verify something, and it doesn't wander off building things you never asked for.
 
-That's *behavior*, not IQ — and behavior transfers. fable-it packs those behaviors into a single Claude Code skill, so Opus runs long, unattended jobs the way Fable does.
+That's *behavior*, not IQ — and behavior transfers. fable-it v2 encodes that behavioral contract — captured firsthand from a live Fable 5 session and cross-checked against Anthropic's "Prompting Claude Fable 5" guide — as **checkable gates with disk-backed state**, model-adaptive for **Sonnet 5 and Opus 4.8**, so your model runs long, unattended jobs the way Fable does.
+
+**What v2 adds:** a 5-gate catalog replacing posture prose (turn-end, claim, state-change, phase-boundary, delegation) · an evidence ledger that makes `VERIFIED` a lookup, not a vibe · a fresh-context verifier that audits every report before it ships · a model-adaptive posture applied at Step 0 · cost-aware delegation routing · optional [hardened-mode hooks](plugins/fable-it/hooks/README.md) (opt-in, fail-open) that mechanically block promise-endings and evidence-free VERIFIED rows on Claude Code.
 
 ## The honest claim
 
-It does **not** turn Opus into Fable, and anyone who tells you a skill can do that is selling something. It makes Opus **behave** like Fable on long work — which is most of what you actually felt when you used Fable.
+It does **not** turn Sonnet or Opus into Fable, and anyone who tells you a skill can do that is selling something. It makes your model **behave** like Fable on long work — which is most of what you actually felt when you used Fable. Precisely: evidence-grounded status reporting and reference verification measurably suppress the failure modes that bite overnight runs (Anthropic reports the claim-grounding snippet "nearly eliminated fabricated status reports"). It does not make a model "more honest" in general.
 
-| Ports to Opus ✓ | Stays with Fable ✕ |
+| Ports to your model ✓ | Stays with Fable ✕ |
 |---|---|
 | Coherence across a long run, holding early constraints | Raw reasoning ceiling on genuinely hard problems |
 | Self-verification before declaring a step done | One-shotting a complex system from a thin prompt |
-| Honest, evidence-backed progress reporting | The deepest long-context retention quality |
+| Honest, evidence-backed progress reporting — **prompt-induced on Fable too** (the claim-grounding rule is published prompt text, the best possible news for a skill that ports it) | The deepest long-context retention quality |
 | Autonomous-turn discipline, no needless pausing | Anything that comes from the weights, not the prompt |
 | Restraint — doing the job, not inventing scope | |
 
-The line is real. But the part that ports over is the part that makes overnight jobs survivable: your Opus runs them far more like Fable than it did yesterday.
+The line is real (evidence: the [Sources](#sources) below). But the part that ports over is the part that makes overnight jobs survivable: your model runs them far more like Fable than it did yesterday.
 
 ## Installation
 
@@ -238,12 +243,19 @@ Run window: 02:14 → 05:47  |  Approach: single session
 
 ## Status
 
-Honest, like the skill itself: this has been tabletop-tested against real prompts, not yet hammered end-to-end in every environment. Validate the plugin locally before relying on it:
+Honest, like the skill itself: v2 ships against a **26-case binding test contract** (`delivery/epics-fable-it-v2.md`) — tabletop-golden scenarios judged by fresh-context agents against transcripts registered before implementation, scripted grep-lints (`tests/lints/`), and executable hook unit tests (`plugins/fable-it/hooks/tests/`). Live-run `[REAL]` cases were exercised on Sonnet 5 and Opus 4.8 sessions; per-epic status lives in `delivery/STATUS.md`. It has not yet been hammered end-to-end in every environment. Validate the plugin locally before relying on it:
 
 ```sh
 claude plugin validate ./plugins/fable-it
 claude plugin validate .
 ```
+
+## Sources
+
+The claims above are researched, not vibes — the ports/stays table and every v2 design decision trace to two documents in this repo:
+
+- [`docs/research/01-fable5-vs-opus.md`](docs/research/01-fable5-vs-opus.md) — what makes Fable 5 better than Opus and which parts a skill can port (advantage catalog F1–F17, with evidence classes: first-party docs, benchmarks, live introspection of a Fable 5 session, community analysis)
+- [`docs/research/02-gap-analysis.md`](docs/research/02-gap-analysis.md) — fable-it v1 audited against that catalog (gaps, structural defects D1–D9, priority tiers that became the v2 epics)
 
 ## Security considerations
 
