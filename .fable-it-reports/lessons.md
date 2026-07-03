@@ -8,3 +8,6 @@
 - gh pr merge + immediate `git pull` can race; verify merge state with `gh pr view <n> --json state` before trusting the local log.
 - Scratchpad `find` output aggregates and hides dotfiles — verify hidden dirs with `ls -la`.
 - Keep every VERIFIED-adjacent sentence in skill files within 2 lines of an evidence/ledger mention — the T2 co-occurrence lint enforces it and it reads better anyway.
+
+## From the v2.0.0 deploy (2026-07-02)
+- An unquoted YAML frontmatter `description:` containing a colon+space (e.g. "for: simple") fails to parse and the skill silently loads with EMPTY metadata — no error at runtime. Fix: fold long descriptions into a `>-` block scalar. Always run `claude plugin validate ./plugins/<name>` before tagging a release; it catches this (the bug had shipped in v0.1.0 unnoticed).
