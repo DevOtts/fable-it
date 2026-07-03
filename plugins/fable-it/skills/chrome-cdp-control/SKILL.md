@@ -1,6 +1,17 @@
 ---
 name: chrome-cdp-control
-description: Drive the user's real, logged-in Chrome browser via Chrome DevTools Protocol using Playwright (endpoint from CDP_URL, defaulting to localhost). Trigger this skill when the user explicitly asks to "use my Chrome", "use my browser", "log into", "post on" (X, Reddit, LinkedIn, etc.), or any task that requires an authenticated session, persistent cookies, or bot-detection evasion that headless scraping cannot provide. Also trigger when the user references their CDP setup, their `~/.chrome-automation` profile, or asks Claude to manually walk through actions on a real site one step at a time. Do NOT use this skill for: simple unauthenticated content fetches (use `web_fetch`), bulk headless scraping (use a standalone Playwright script), or anything where a fresh Chromium instance would suffice. Do NOT use for tasks that can be solved by an API call to the same service.
+description: >-
+  Drive the user's real, logged-in Chrome browser via Chrome DevTools Protocol using
+  Playwright (endpoint from CDP_URL, defaulting to localhost). Trigger this skill when
+  the user explicitly asks to "use my Chrome", "use my browser", "log into", "post on"
+  (X, Reddit, LinkedIn, etc.), or any task that requires an authenticated session,
+  persistent cookies, or bot-detection evasion that headless scraping cannot provide.
+  Also trigger when the user references their CDP setup, their `~/.chrome-automation`
+  profile, or asks Claude to manually walk through actions on a real site one step at
+  a time. Do NOT use this skill for simple unauthenticated content fetches (use
+  `web_fetch`), bulk headless scraping (use a standalone Playwright script), or
+  anything where a fresh Chromium instance would suffice. Do NOT use for tasks that
+  can be solved by an API call to the same service.
 author: DevOtts
 author_url: https://github.com/DevOtts
 ---
