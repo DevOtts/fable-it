@@ -42,8 +42,13 @@
   <a href="#platform-compatibility">Platform compatibility</a>
   &nbsp;·&nbsp;
   <a href="#sources">Sources</a>
+  &nbsp;·&nbsp;
+  <a href="CHANGELOG.md">Changelog</a>
 </p>
 
+
+> [!IMPORTANT]
+> **🎉 v2.0.0 is out (2026-07-02) — from postures to gates.** The whole plugin was rebuilt from firsthand Fable 5 research: a 5-gate catalog, disk-backed run state, an evidence ledger that makes `VERIFIED` a lookup, a fresh-context verifier on every report, model-adaptive tuning for **Sonnet 5 + Opus 4.8**, cost-aware delegation routing, and optional hardened-mode hooks. Shipped against a 26-case binding test contract. Full details in the [CHANGELOG](CHANGELOG.md).
 
 > [!NOTE]
 > **Optimized for long tasks** — research, browser tasks and mainly **vibe coding**.
