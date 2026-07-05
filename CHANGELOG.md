@@ -4,6 +4,42 @@ All notable changes to fable-it are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] — 2026-07-05
+
+**Tiering that actually ships** — closes the three gaps that forced users to keep
+pasting a "use lower models for lower tasks" paragraph into every prompt.
+
+### Added
+- **Escalate-on-struggle routing gate**: a lower-tier packet that fails its
+  contract (RED tests, delegation-gate output check, or a verifier challenge)
+  after one corrected re-dispatch — or thrashes — is re-run one tier up, straight
+  to the session model when it turns out judgment-shaped. Escalations are logged
+  to `run-memory.md` and disclosed in the report's cost table (new `Escalated?`
+  column); "zero escalations needed" is itself a reportable fact. The inverse
+  discipline is explicit too: don't pre-pay top tier for struggle that hasn't
+  happened.
+- **`/iterate` model tiering**: its Subagent Strategy now routes by task shape
+  (Explore reads and parallel test runs → cheap; spec'd multi-file fixes → mid;
+  skeptic/adversarial-verify and Plan → session model, never downgraded), with
+  the same escalation rule — standalone `/iterate` runs no longer default
+  everything to the session model.
+
+### Fixed
+- **The canonical tier + posture tables now ship with the plugin** at
+  [`plugins/fable-it/skills/references/model-tiers.md`](plugins/fable-it/skills/references/model-tiers.md).
+  v2.0 skills referenced `docs/03-enhancement-spec.md` §4/§4.1, which lives at the
+  repo root and is **not packaged** — on installed hosts the reference resolved
+  nothing, exactly where tiering matters most. All skills now point at the
+  shipped file; the spec keeps the design rationale and points forward.
+
+### Changed
+- **Model-agnostic conductor wording**: "top tier" is defined as *the session
+  model — whatever the user chose to run* (Fable 5, Opus 4.8, Sonnet 5, …), never
+  a hardcoded model name; the escalation target follows the same rule.
+- `tests/lints/t24-launch-routing.sh` now checks the shipped canonical table
+  (existence + escalation gate), rejects stale spec references, and requires the
+  escalate-on-struggle rule in `/launch`.
+
 ## [2.0.0] — 2026-07-02
 
 **"Make your model behave like Fable"** — v2 rebuilds the plugin from postures into
@@ -78,5 +114,6 @@ three coherence guardrails, honest per-criterion report) bundled with `/launch`,
 `/iterate`, `/full-qa` and `/chrome-cdp-control`; multi-platform install via the
 root `SKILL.md`.
 
+[2.1.0]: https://github.com/DevOtts/fable-it/releases/tag/v2.1.0
 [2.0.0]: https://github.com/DevOtts/fable-it/releases/tag/v2.0.0
 [0.1.0]: https://github.com/DevOtts/fable-it/commits/cb1b17a

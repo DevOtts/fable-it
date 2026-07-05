@@ -318,7 +318,7 @@ Format your recommendation as:
 - [Role 2]: [responsibility] (tier: …)
 - ...
 
-Tiers come from the **delegation routing rule** — the canonical table in `docs/03-enhancement-spec.md` §4.1 (reference it; never copy it). Gates: default = inherit the session model when unsure; never downgrade the verifier, anything writing to `decisions.md`, or a packet locking an interface others consume; log each tier choice + reason to `.taskstate/run-memory.md`.
+Tiers come from the **delegation routing rule** — the canonical table in `../references/model-tiers.md` §2–3 (relative to this skill's base directory; ships with the plugin — reference it; never copy it). Gates: default = inherit the session model when unsure; never downgrade the verifier, anything writing to `decisions.md`, or a packet locking an interface others consume; escalate on struggle rather than pre-paying — a lower-tier worker that fails its contract after one corrected re-dispatch, or thrashes, is re-run one tier up; log each tier choice, reason, and escalation to `.taskstate/run-memory.md`.
 
 ### Tooling Changes
 - [ ] [Install/configure X — reason]
@@ -644,7 +644,7 @@ Progress: Read [ABSOLUTE_PATH]/.taskstate/progress-[version].md
 
 Team:
 [For each role from the recommendation:]
-- [Role] (tier per the routing rule in `docs/03-enhancement-spec.md` §4.1): [Responsibilities]. Work in [file paths].
+- [Role] (tier per the routing rule in `../references/model-tiers.md` §2–3): [Responsibilities]. Work in [file paths].
 
 Rules:
 - Require plan approval before implementation

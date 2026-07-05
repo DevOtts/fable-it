@@ -1,18 +1,40 @@
 #!/usr/bin/env bash
-# T24 (E3, grep-lint): launch/SKILL.md team templates reference the spec §4.1 tier
-# table (no divergent copy); default-inherit rule present; no remaining ad-hoc
-# model labels outside the routing rule.
+# T24 (E3, grep-lint): launch/SKILL.md team templates reference the canonical tier
+# table shipped with the plugin (references/model-tiers.md — no divergent copy);
+# default-inherit and escalate-on-struggle rules present; no remaining ad-hoc
+# model labels outside the routing rule. v2.1: canonical home moved from
+# docs/03-enhancement-spec.md §4.1 (which does not ship) into the plugin.
 set -u
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 F="$REPO/plugins/fable-it/skills/launch/SKILL.md"
+T="$REPO/plugins/fable-it/skills/references/model-tiers.md"
 fail=0
 [ -f "$F" ] || { echo "FAIL: $F missing"; exit 1; }
 
-# reference to the canonical table
-if grep -q "03-enhancement-spec.md" "$F" && grep -q "§4.1" "$F"; then
-  echo "ok: references canonical tier table (spec §4.1)"
+# canonical table ships with the plugin
+if [ -f "$T" ] && grep -qi "escalate on struggle" "$T"; then
+  echo "ok: canonical tier table ships with the plugin (incl. escalation gate)"
 else
-  echo "FAIL: no reference to spec §4.1 tier table"; fail=1
+  echo "FAIL: plugins/fable-it/skills/references/model-tiers.md missing or lacks the escalation gate"; fail=1
+fi
+
+# reference to the canonical table (and no stale pointer to the non-shipping spec)
+if grep -q "references/model-tiers.md" "$F"; then
+  echo "ok: references canonical tier table (references/model-tiers.md)"
+else
+  echo "FAIL: no reference to references/model-tiers.md tier table"; fail=1
+fi
+if grep -q "03-enhancement-spec.md" "$F"; then
+  echo "FAIL: stale reference to docs/03-enhancement-spec.md (does not ship with the plugin)"; fail=1
+else
+  echo "ok: no stale spec reference"
+fi
+
+# escalate-on-struggle present in the routing rule
+if grep -qi "escalate on struggle" "$F"; then
+  echo "ok: escalate-on-struggle rule present"
+else
+  echo "FAIL: escalate-on-struggle rule missing"; fail=1
 fi
 
 # no divergent copy: the table's distinctive row markers must not be duplicated here
