@@ -67,7 +67,7 @@ If the goal text already contains paths, credentials hints, or scope fences, lif
 Extract the goal and DoD from whatever the user pasted, however informally.
 - DoD already numbered and testable → keep verbatim. Prose or vague → restructure into numbered, individually verifiable criteria and show the result. Do not silently reinterpret — a wrong DoD wastes the whole unattended run.
 - Read `.fable-it-reports/lessons.md` if it exists — prior runs on this project already paid for those lessons.
-- **Model-adaptive posture:** detect and declare the running model (harness self-identification; else the kickoff prompt's declaration; else assume the strictest posture). Apply the per-model posture table in `docs/03-enhancement-spec.md` §4 as deltas on this contract — reference that table, never copy it (copies drift). Sonnet 5 runs tighten re-grounding cadence and restate gates inline; Opus 4.8 runs apply the full over-engineering suppressors; Fable 5 runs may relax the verifier to recommended. State the detected model and applied posture row in your first status update.
+- **Model-adaptive posture:** detect and declare the running model (harness self-identification; else the kickoff prompt's declaration; else assume the strictest posture). Apply the per-model posture table in `../references/model-tiers.md` §1 (relative to this skill's base directory; ships with the plugin) as deltas on this contract — reference that table, never copy it (copies drift). Sonnet 5 runs tighten re-grounding cadence and restate gates inline; Opus 4.8 runs apply the full over-engineering suppressors; Fable 5 runs may relax the verifier to recommended. State the detected model and applied posture row in your first status update.
 
 State optional-slot assumptions in one short block, then proceed. Do not wait for confirmation; the user said go.
 
@@ -102,7 +102,7 @@ Invoke `/launch` in **unattended mode** for environment inventory, tooling setup
 - Subparts sharing a critical decision (connector + renderer + the schema both depend on) → one thread, or bind them through `decisions.md` (Guardrail 1). Parallelizing decision-coupled work amplifies drift.
 - "Save context window" is a weak reason to parallelize; do it for independence and speed.
 
-**Delegation routing rule** (cost-aware, CONTRACT §1): route each work packet to a model tier **by task shape** using the canonical tier table in `docs/03-enhancement-spec.md` §4.1 — reference it, never copy it. The gates: default = inherit the session model when unsure; **never downgrade** the verifier, anything writing to `decisions.md`, or any packet locking an interface others consume; use lower reasoning effort for mechanical stages where the host supports it; log every tier choice + one-line reason to `run-memory.md`; disclose the spend as the report's per-agent cost table. Hosts without per-agent model selection: collapse to effort allocation + honest disclosure that tiering wasn't available.
+**Delegation routing rule** (cost-aware, CONTRACT §1): route each work packet to a model tier **by task shape** using the canonical tier table in `../references/model-tiers.md` §2–3 — reference it, never copy it. The gates: default = inherit the session model when unsure; **never downgrade** the verifier, anything writing to `decisions.md`, or any packet locking an interface others consume; **escalate on struggle, don't pre-pay** — a lower-tier packet that fails its contract after one corrected re-dispatch, or thrashes, gets re-run one tier up (straight to the session model when it turns out judgment-shaped), with the escalation logged to `run-memory.md`; use lower reasoning effort for mechanical stages where the host supports it; log every tier choice + one-line reason to `run-memory.md`; disclose the spend as the report's per-agent cost table (escalations included — zero escalations is a reportable fact). Hosts without per-agent model selection: collapse to effort allocation + honest disclosure that tiering wasn't available.
 
 ## Step 4 — The three guardrails (active for the whole run)
 
@@ -152,8 +152,10 @@ Run window: <start> → <end>   |   Model: <detected model + posture row>   |   
 - <everything skipped, sampled, bounded, or capped this run, and why — an empty section must say "nothing was capped">
 
 ## Delegation & cost
-| Packet | Model tier | Why |
-|---|---|---|
+| Packet | Model tier | Why | Escalated? |
+|---|---|---|---|
+<!-- Escalated?: "no", or "cheap→mid: <reason>" per the routing gates. If every row is "no", state "zero escalations needed" below the table. -->
+
 
 ## What changed
 ## Decisions made (from decisions.md)
@@ -197,6 +199,7 @@ Tell the user the exact paths, then stop. Do not append a plan or "want me to co
 - Do not trust an idle subagent delivered — check its output on disk. (Delegation gate.)
 - Do not route authenticated real-Chrome work to `/full-qa`; it goes to `/chrome-cdp-control` per-write gates. (Step 5 table.)
 - Do not silently default every packet to the top model tier, and never downgrade the verifier. (Step 3 routing rule.)
+- Do not keep a struggling lower-tier agent on a packet past one corrected re-dispatch — escalate it one tier up and log it; and do not pre-pay top tier for struggle that hasn't happened. (Routing gate 3.)
 - Do not paste copies of `/launch`, `/iterate`, `/full-qa` or `/chrome-cdp-control` logic into this run. Call them by name.
 - Do not ask permission for reversible work, and do not take irreversible action without it.
 

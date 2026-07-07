@@ -111,6 +111,14 @@ Use subagents to protect your context window and parallelize independent work:
 | Need to run parallel test cases | `general-purpose` | Each test scenario with specific commands to run |
 | Need to plan a complex approach | `Plan` | "Design the fix strategy for X, considering A and B" |
 
+### Model tiering (cost-aware)
+
+Where the host lets you set a subagent's model, route by task shape per the canonical table in `../references/model-tiers.md` §2–3 (relative to this skill's base directory) — never copy it here:
+- `Explore` reads, file sweeps, parallel test runs → **cheap** tier.
+- Well-specified multi-file fixes against exact instructions → **mid** tier.
+- Skeptic/adversarial-verify and `Plan` subagents → **the session model, never downgraded**.
+- Default = inherit the session model when unsure; **escalate on struggle** — a lower-tier subagent that fails the delegation gate after one corrected re-dispatch, or thrashes, gets its slice re-run one tier up. When running under `/fable-it`, log every tier choice and escalation to `.taskstate/run-memory.md`; standalone, note them in the RESULT summary.
+
 ### What to keep for yourself
 
 - Final decisions on approach tradeoffs

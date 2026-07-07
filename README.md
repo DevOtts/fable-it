@@ -48,6 +48,9 @@
 
 
 > [!IMPORTANT]
+> **🪙 v2.1.0 (2026-07-05) — tiering that actually ships.** The canonical cheap/mid/top tier table now [ships inside the plugin](plugins/fable-it/skills/references/model-tiers.md) (v2.0 pointed installed hosts at a doc that isn't packaged), routing gains an **escalate-on-struggle** rule (a lower-tier subagent that fails its contract or thrashes gets its slice re-run one tier up — logged and disclosed; never pre-pay top tier "just in case"), and `/iterate` now tiers its own subagents. The conductor is whatever model you choose — "top tier" means *the session model*, never a hardcoded name. Details in the [CHANGELOG](CHANGELOG.md).
+
+> [!IMPORTANT]
 > **🎉 v2.0.0 is out (2026-07-02) — from postures to gates.** The whole plugin was rebuilt from firsthand Fable 5 research: a 5-gate catalog, disk-backed run state, an evidence ledger that makes `VERIFIED` a lookup, a fresh-context verifier on every report, model-adaptive tuning for **Sonnet 5 + Opus 4.8**, cost-aware delegation routing, and optional hardened-mode hooks. Shipped against a 26-case binding test contract. Full details in the [CHANGELOG](CHANGELOG.md).
 
 > [!NOTE]

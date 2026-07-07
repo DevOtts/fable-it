@@ -57,8 +57,11 @@ grep -qi "prompt-induced" "$RM" && echo "ok(T20b): corrected honest-reporting ro
 ########################################
 # T20c — plugin.json + marketplace.json
 ########################################
-grep -q '"version": "2.0.0"' "$PJ" && echo "ok(T20c): plugin.json 2.0.0" || { echo "FAIL(T20c): plugin.json version"; fail=1; }
-grep -q '"version": "2.0.0"' "$MJ" && echo "ok(T20c): marketplace.json 2.0.0" || { echo "FAIL(T20c): marketplace.json version"; fail=1; }
+# version pins derive from the CHANGELOG's latest entry (no per-release lint edit)
+V=$(sed -n 's/^## \[\([0-9][0-9.]*\)\].*/\1/p' "$REPO/CHANGELOG.md" | head -1)
+[ -n "$V" ] || { echo "FAIL(T20c): no version found in CHANGELOG.md"; fail=1; }
+grep -q "\"version\": \"$V\"" "$PJ" && echo "ok(T20c): plugin.json $V (matches CHANGELOG)" || { echo "FAIL(T20c): plugin.json version != CHANGELOG $V"; fail=1; }
+grep -q "\"version\": \"$V\"" "$MJ" && echo "ok(T20c): marketplace.json $V (matches CHANGELOG)" || { echo "FAIL(T20c): marketplace.json version != CHANGELOG $V"; fail=1; }
 for f in "$PJ" "$MJ"; do
   grep -qi "Sonnet 5" "$f" && grep -qi "Opus" "$f" && echo "ok(T20c): $(basename "$f") description mentions Sonnet 5 + Opus" || { echo "FAIL(T20c): $(basename "$f") description models"; fail=1; }
 done

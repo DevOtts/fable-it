@@ -143,46 +143,28 @@ converts Guardrail 3 from self-policing into a lookup.
 
 ## 4. The model-adaptive posture table (D1)
 
-Detected at Step 0 (ask the harness/model to self-identify; fall back to asking the
-user in the kickoff prompt). Applied as deltas on the shared contract:
-
-| Dimension | Sonnet 5 | Opus 4.8 | Fable 5 (if it's the runner) |
-|---|---|---|---|
-| Re-grounding cadence | every phase AND every ~10 tool calls within a phase | every phase | every phase (contract minimum) |
-| Gate verbosity | gates restated inline at each trigger point | gates catalog referenced by name | catalog reference |
-| Over-engineering suppressors (F5) | light | **full** (no-refactor, no-extra-abstraction, brevity snippets — Opus-class models over-build at high effort) | full at high effort |
-| Verifier | mandatory fresh-context verifier | mandatory | optional (self-verification stronger, still recommended) |
-| Decomposition granularity | smaller work packets, more checkpoints to disk | standard | standard |
-| Cost note in report | standard | standard | flag: ~2x Opus token price — pacing/effort discipline matters |
+> **Canonical home moved (v2.1, 2026-07-05):** the posture table now lives at
+> [`plugins/fable-it/skills/references/model-tiers.md`](../plugins/fable-it/skills/references/model-tiers.md) §1
+> so it **ships with the plugin** — this doc does not, and skills that referenced
+> it here resolved nothing on installed hosts (the v2.1 gap fix). Skills reference
+> the plugin file; no divergent copies. This section keeps the design rationale
+> only: detected at Step 0 (harness self-identification; fall back to the kickoff
+> prompt's declaration; else strictest posture), applied as deltas on the shared
+> contract, because the three runner models fail differently — Sonnet drifts
+> without re-grounding, Opus over-builds at high effort, Fable self-verifies well.
 
 ### 4.1 Cost-aware delegation routing (F17, G2.5)
 
-When the conductor (or `/launch`) splits work into subagents/teams, each work
-packet is routed to a model tier **by task shape**, not by default to the session
-model. Canonical table (skills reference it; no divergent copies):
-
-| Tier | Use for | Typical packets |
-|---|---|---|
-| **Cheap** (Haiku 4.5 or host's cheapest) | mechanical, low-ambiguity, high-volume, easily-verified work | file sweeps/greps, running existing test suites, formatting/lint fixes, data extraction, screenshot-and-report browser loops |
-| **Mid** (Sonnet 5) | standard implementation and execution against a locked contract | feature build with clear spec, `/full-qa` test execution, research streams, doc drafting |
-| **Top** (Opus 4.8 / the session model) | judgment-heavy or error-amplifying work | architecture and decomposition, root-cause adjudication, **the fresh-context verifier**, cross-cutting decisions, final report reconciliation |
-
-Routing rules (gates, per the contract style):
-1. **Default = inherit the session model when unsure** — misrouting judgment work
-   to a cheap tier costs more (rework + drift) than it saves. (This mirrors the
-   Fable 5 harness's own delegation guidance.)
-2. **Never downgrade**: the verifier, anything writing to `decisions.md`, or any
-   packet that locks an interface other packets consume.
-3. **Effort tiers too**: where the host supports reasoning-effort settings, low
-   effort for cheap mechanical stages, high only for verify/judge stages.
-4. **Log the choice**: each delegation records model tier + one-line reason in
-   `run-memory.md`.
-5. **Disclose the spend**: the unified report's cost line becomes a per-agent
-   table — packet, model tier, why — so the human can audit the economics
-   (sibling of the no-silent-caps rule).
-
-Degraded hosts without per-agent model selection: the rule collapses to effort
-allocation and honest disclosure that tiering wasn't available.
+> **Canonical home moved (v2.1):** the tier table and routing gates live at
+> [`plugins/fable-it/skills/references/model-tiers.md`](../plugins/fable-it/skills/references/model-tiers.md) §2–3.
+> Rationale kept here: packets route to cheap/mid/top tiers **by task shape**
+> rather than defaulting to the session model, because top-tier prices on
+> mechanical packets buy nothing. v2.1 added routing gate 3, **escalate on
+> struggle, don't pre-pay**: a lower-tier packet that fails its contract after
+> one corrected re-dispatch (or thrashes) is re-run one tier up, with the
+> escalation logged and disclosed — the escalation path is what makes
+> cheap-by-default safe. The conductor is whatever model the user chose; "top
+> tier" means the session model, never a hardcoded name.
 
 ## 5. Hardened mode (G2.1 — in scope)
 
