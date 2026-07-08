@@ -101,6 +101,8 @@ If **PARTIAL**: note what works, start next cycle for remaining failures.
 
 Use subagents to protect your context window and parallelize independent work:
 
+**Safe parallel (v3):** the moment two or more subagents will *write to the repo*, isolate them — each mutating subagent runs in its own `git worktree`/`agent/<lane>` branch, and you (the coordinator) merge lanes back **sequentially**, running the integration check (merged build + lockfile + tests) after each; never accept a wave on "output exists," and no subagent runs `git merge`/`checkout`/`reset` in a shared tree. Read-only research subagents may share the tree. Full protocol: `../references/parallel-safety.md`.
+
 ### When to spawn a subagent
 
 | Situation | Subagent type | What to hand off |

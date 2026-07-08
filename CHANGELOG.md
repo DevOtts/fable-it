@@ -4,6 +4,41 @@ All notable changes to fable-it are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [3.0.0] — 2026-07-08
+
+**Safe parallel execution** — a fable-it run that fans out parallel *mutating*
+agents, or that shares a repo with another session, was previously unprotected at
+the level of the working tree itself: the delegation gate checked that a worker's
+output *existed*, not that two workers weren't writing the same `.git`, nor that a
+merged slice actually integrated. This release adds three gates that make parallel
+and multi-session execution safe by construction. Grounded in the v3-research
+dogfood findings (EC-B8 parallel-program interlock, EC-C8 workspace quiesce, EC-G5
+per-slice integration) and a firsthand incident where two coordinators co-mutating
+one repo's `.git` corrupted the tree.
+
+### Added
+- **Interlock gate (G-INTERLOCK)**: a run acquires a `.taskstate/RUNLOCK` (owner ·
+  host · pid · startedAt · heartbeat) at start and before any mutating fan-out; a
+  live lock held by another run makes this run BLOCK or wait rather than co-mutate;
+  a stale lock (dead owner / expired heartbeat) is reclaimed with a logged note;
+  released on the stop-hook. Treat the working tree like a database — serialize or
+  isolate concurrent writers, never hope.
+- **Worktree gate (G-WORKTREE)**: each parallel *mutating* agent runs in its own
+  `git worktree` on an `agent/<lane>` branch; the coordinator alone merges lanes
+  back, sequentially. Read-only fan-out may share the tree. No subagent runs
+  `git merge`/`checkout`/`reset` in a shared tree.
+- **Integration gate (G-INTEGRATE)**: after a slice merges back, acceptance requires
+  the *merged* tree to pass the project's integration shape (build, lockfile present
+  + consistent, declared tests/lints) — not merely "the worker's output exists." A
+  slice green in isolation but integration-broken (canonical: a `package.json` added
+  with no lockfile) is reopened, not accepted.
+- New reference `plugins/fable-it/skills/references/parallel-safety.md` — the
+  operational protocol (RUNLOCK schema, worktree fan-out/merge-back recipe,
+  stale-lock reclaim, integration check) that the three gates and `/launch`,
+  `/iterate` point at. Optional fail-open Claude Code preflight/stop hook noted.
+- Six binding tabletop goldens (T30–T35) exercising each gate, including an incident
+  replay proving the 2026-07-08 shared-`.git` collision is structurally prevented.
+
 ## [2.1.0] — 2026-07-05
 
 **Tiering that actually ships** — closes the three gaps that forced users to keep
