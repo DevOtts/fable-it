@@ -20,18 +20,32 @@ or isolate, never hope.**
   "startedAt": "<ISO8601>", "heartbeat": "<ISO8601, refreshed each phase>" }
 ```
 
-- **Acquire** at run start (Step 1) and refresh `heartbeat` at every phase boundary.
-- **Live** = `heartbeat` age < 10 min. Before acquiring, read any existing RUNLOCK:
+- **Acquire atomically** at run start (Step 1): create the file with exclusive-create
+  semantics — `(set -C; printf '%s' "$json" > .taskstate/RUNLOCK)` (shell noclobber)
+  or `O_EXCL` — **never read-then-check-then-write**: two runs starting together must
+  not both see "no lock" and both write. If exclusive create isn't available on the
+  host, write, then re-read and confirm `owner` is you before touching the tree.
+- **Refresh `heartbeat` on a timer — every 2–3 minutes — as well as at phase
+  boundaries.** Phase-boundary-only refresh is a hole: one long phase (a big build,
+  a slow agent wave) outlives the staleness window and a *live* run gets "reclaimed"
+  mid-work — the exact corruption this gate exists to prevent.
+- **Live** = `heartbeat` age < 10 min, **or** the owner pid is running on this host
+  (same-host pid liveness overrides an aged heartbeat — never reclaim a lock whose
+  owner is provably alive). If exclusive create fails, read the existing RUNLOCK:
   - held live by another owner → **do not co-mutate.** Report BLOCKED
     ("another run owns this tree: <owner> on <host>, pid <pid>") or wait for release,
     per the run's autonomy setting.
-  - **stale** (heartbeat age ≥ 10 min, or pid not running on this host) → reclaim it,
-    writing a `run-memory.md` note: `reclaimed stale RUNLOCK from <owner> (heartbeat <age>)`.
-    Never a silent takeover.
+  - **stale** (heartbeat age ≥ 10 min **and** the owner is not provably alive — same
+    host: pid not running; different host: no pid check is possible, the aged
+    heartbeat governs) → reclaim it, writing a `run-memory.md` note:
+    `reclaimed stale RUNLOCK from <owner> (heartbeat <age>)`. Never a silent takeover.
 - **Release** on completion and on the stop-hook (delete the file). A crash leaves a
   stale lock, which the next run reclaims — so a crash never permanently blocks.
 - Also treat a pre-existing `.git/MERGE_HEAD` (an unfinished merge) as "tree busy":
   resolve or abort it before starting, never start work on top of it.
+- **Scope**: the RUNLOCK protects **one working tree**. Separate clones of the same
+  repo are separate trees — this lock does not coordinate them; that coordination
+  happens at the remote (protected branches, PRs), not here.
 
 ## 2. Worktree isolation — one tree per mutating agent (worktree gate)
 
@@ -52,6 +66,11 @@ done
 - Prefer the harness's native isolation when available (e.g. an agent runner's
   `isolation: worktree` option) — same guarantee, auto-cleaned when unchanged.
 - Clean up: `git worktree remove .fable-it/wt/<lane>` after merge; `git worktree prune`.
+- A crashed run can leave `agent/<lane>` branches behind, which makes the next
+  `git worktree add -b agent/<lane>` fail. Before dispatch, check
+  `git branch --list 'agent/*'`: salvage or delete the leftover **with a logged note**
+  (like a stale-lock reclaim — never silently), or suffix the new lane
+  (`agent/B-2`). Never reuse another run's lane branch in place.
 
 ## 3. Sequential merge-back + integration acceptance (integration gate)
 

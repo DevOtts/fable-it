@@ -1,6 +1,6 @@
 # fable-it v3 — CONTRACT (Safe Parallel Execution)
 
-Version: **v1.0 — FROZEN 2026-07-08**
+Version: **v1.1 — amended 2026-07-08** (v1.0 FROZEN 2026-07-08; amendments in Changelog)
 Spec: `docs/04-v3-safe-parallel-spec.md` · Epics/tests: `delivery/v3/epics-fable-it-v3.md` · Goldens: `delivery/v3/goldens/`
 
 ## 1. Vocabulary (canonical)
@@ -38,3 +38,4 @@ NOT-STARTED · IN-PROGRESS · IMPLEMENTED-NOT-VERIFIED · VERIFIED (a golden is 
 ## Changelog
 
 - v1.0 — 2026-07-08 — frozen. Scope: G-INTERLOCK + G-WORKTREE + G-INTEGRATE. Amendments land here (v1.0 → v1.1 …).
+- v1.1 — 2026-07-08 — amendment (ships as **3.0.1**), from the post-release Fable 5 review. G-INTERLOCK mechanics tightened, gates unchanged: (a) RUNLOCK acquisition is **atomic** (exclusive-create; the read-then-check-then-write TOCTOU race is forbidden); (b) heartbeat refresh is **time-based (2–3 min)**, not phase-boundary-only, so a long phase can't make a live run look stale; (c) reclaim requires the owner **not provably alive** (same-host pid check overrides an aged heartbeat); (d) G-WORKTREE: leftover `agent/<lane>` branches from a crashed run are cleaned up with a logged note before dispatch; (e) scope note: the lock is per working tree — separate clones coordinate at the remote, not via RUNLOCK.

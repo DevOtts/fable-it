@@ -4,6 +4,30 @@ All notable changes to fable-it are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [3.0.1] — 2026-07-08
+
+**Interlock hardening** — fixes two protocol races found in the post-release
+Fable 5 review (CONTRACT v1.1 amendment); gates unchanged.
+
+### Fixed
+- **Atomic RUNLOCK acquisition**: the lock is created with exclusive-create
+  semantics (`set -C` noclobber / `O_EXCL`), never read-then-check-then-write —
+  two runs starting simultaneously can no longer both believe they own the tree
+  (TOCTOU race).
+- **Time-based heartbeat**: the heartbeat is refreshed on a timer (2–3 min) as
+  well as at phase boundaries — a single long phase (big build, slow agent wave)
+  can no longer make a live run look stale and get "reclaimed" mid-work.
+- **Reclaim requires a dead owner**: same-host pid liveness overrides an aged
+  heartbeat; a lock whose owner is provably alive is never reclaimed.
+
+### Added
+- **Stale lane-branch cleanup** (worktree gate): leftover `agent/<lane>` branches
+  from a crashed run are detected before dispatch and salvaged/deleted with a
+  logged note (or the lane is suffixed) — `git worktree add -b` no longer fails
+  on crash leftovers.
+- **Scope note**: the RUNLOCK protects one working tree; separate clones of the
+  same repo coordinate at the remote (protected branches/PRs), not via the lock.
+
 ## [3.0.0] — 2026-07-08
 
 **Safe parallel execution** — a fable-it run that fans out parallel *mutating*
