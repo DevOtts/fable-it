@@ -15,3 +15,5 @@ Branch: release/v3.0.0-safe-parallel @ fa432c4. Vocabulary: NOT-STARTED · IN-PR
 | 6 goldens T30–T35 pass their binding rules (fresh-context walk) | VERIFIED | 6/6 CONFIRMED 2026-07-08 (VERIFICATION.md) |
 
 DoD = all 6 goldens CONFIRMED by the fresh-context verifier. **MET 2026-07-08.** v3.0.0 ready to merge→main + tag.
+
+**Released:** merged to main (b300d2a), tagged v3.0.1, published https://github.com/DevOtts/fable-it/releases/tag/v3.0.1 (2026-07-09). Prod-verified: fresh clone of the tag — 9 lints + 7 hook tests green, plugin+marketplace validate pass, no personal research in tree.
