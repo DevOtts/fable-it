@@ -1,6 +1,6 @@
 ---
 name: fable-it
-description: Autonomous goal-to-DoD delivery orchestrator — "Make your model behave like Fable". Hand it a goal and a numbered Definition of Done and it runs the whole job to completion, typically unattended, enforcing checkable gates (turn-end, claim, state-change, phase-boundary, delegation, and safe-parallel: interlock, worktree, integration), disk-backed run state, an evidence ledger that makes VERIFIED a lookup, a fresh-eyes verification pass, and an honest per-criterion report. Model-adaptive for Sonnet 5 and Opus 4.8; host-agnostic (Claude Code, Cursor, Codex, Copilot and any SKILL.md-compatible agent).
+description: 'Autonomous goal-to-DoD delivery orchestrator — "Make your model behave like Fable". Hand it a goal and a numbered Definition of Done and it runs the whole job to completion, typically unattended, enforcing checkable gates (turn-end, claim, state-change, phase-boundary, delegation, and safe-parallel: interlock, worktree, integration), disk-backed run state, an evidence ledger that makes VERIFIED a lookup, a fresh-eyes verification pass, and an honest per-criterion report. Model-adaptive for Sonnet 5 and Opus 4.8; host-agnostic (Claude Code, Cursor, Codex, Copilot and any SKILL.md-compatible agent).'
 version: 3.0.1
 license: MIT
 author: DevOtts
