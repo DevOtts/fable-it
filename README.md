@@ -50,9 +50,6 @@
 > [!IMPORTANT]
 > **🔒 v3.0.1 (2026-07-08) — safe parallel execution, now proven under contention.** A fable-it run that fans out parallel *mutating* agents — or shares a repo with another session — is now safe **by construction**: an atomic run lock ([G-INTERLOCK](plugins/fable-it/skills/references/parallel-safety.md)), one `git worktree` per mutating lane (G-WORKTREE), and a merged-tree integration gate (G-INTEGRATE), hardened in v3.0.1 with TOCTOU-free lock acquire, timer heartbeats, dead-owner-only reclaim, and crash-leftover lane cleanup. Validated by two A/B rounds against v2.1.0: identical deliverable quality single-lane, and a 60/46 rubric win on an adversarial parallel run — v2's failure mode (confident false completion with leftover worktrees) is structurally eliminated. Details in the [CHANGELOG](CHANGELOG.md).
 
-> [!IMPORTANT]
-> **🪙 v2.1.0 (2026-07-05) — tiering that actually ships.** The canonical cheap/mid/top tier table now [ships inside the plugin](plugins/fable-it/skills/references/model-tiers.md) (v2.0 pointed installed hosts at a doc that isn't packaged), routing gains an **escalate-on-struggle** rule (a lower-tier subagent that fails its contract or thrashes gets its slice re-run one tier up — logged and disclosed; never pre-pay top tier "just in case"), and `/iterate` now tiers its own subagents. The conductor is whatever model you choose — "top tier" means *the session model*, never a hardcoded name. Details in the [CHANGELOG](CHANGELOG.md).
-
 > [!NOTE]
 > **Optimized for long tasks** — research, browser tasks and mainly **vibe coding**.
 
