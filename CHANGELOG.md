@@ -4,6 +4,68 @@ All notable changes to fable-it are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [3.0.1] — 2026-07-08
+
+**Interlock hardening** — fixes two protocol races found in the post-release
+Fable 5 review (CONTRACT v1.1 amendment); gates unchanged. Validated by two
+A/B rounds against v2.1.0: identical deliverable quality on a single-lane
+run, and a 60/46 rubric win on an adversarial parallel run where v2 reported
+confident false completion with leftover worktrees.
+
+### Fixed
+- **Atomic RUNLOCK acquisition**: the lock is created with exclusive-create
+  semantics (`set -C` noclobber / `O_EXCL`), never read-then-check-then-write —
+  two runs starting simultaneously can no longer both believe they own the tree
+  (TOCTOU race).
+- **Time-based heartbeat**: the heartbeat is refreshed on a timer (2–3 min) as
+  well as at phase boundaries — a single long phase (big build, slow agent wave)
+  can no longer make a live run look stale and get "reclaimed" mid-work.
+- **Reclaim requires a dead owner**: same-host pid liveness overrides an aged
+  heartbeat; a lock whose owner is provably alive is never reclaimed.
+
+### Added
+- **Stale lane-branch cleanup** (worktree gate): leftover `agent/<lane>` branches
+  from a crashed run are detected before dispatch and salvaged/deleted with a
+  logged note (or the lane is suffixed) — `git worktree add -b` no longer fails
+  on crash leftovers.
+- **Scope note**: the RUNLOCK protects one working tree; separate clones of the
+  same repo coordinate at the remote (protected branches/PRs), not via the lock.
+
+## [3.0.0] — 2026-07-08
+
+**Safe parallel execution** — a fable-it run that fans out parallel *mutating*
+agents, or that shares a repo with another session, was previously unprotected at
+the level of the working tree itself: the delegation gate checked that a worker's
+output *existed*, not that two workers weren't writing the same `.git`, nor that a
+merged slice actually integrated. This release adds three gates that make parallel
+and multi-session execution safe by construction. Grounded in the v3-research
+dogfood findings (EC-B8 parallel-program interlock, EC-C8 workspace quiesce, EC-G5
+per-slice integration) and a firsthand incident where two coordinators co-mutating
+one repo's `.git` corrupted the tree.
+
+### Added
+- **Interlock gate (G-INTERLOCK)**: a run acquires a `.taskstate/RUNLOCK` (owner ·
+  host · pid · startedAt · heartbeat) at start and before any mutating fan-out; a
+  live lock held by another run makes this run BLOCK or wait rather than co-mutate;
+  a stale lock (dead owner / expired heartbeat) is reclaimed with a logged note;
+  released on the stop-hook. Treat the working tree like a database — serialize or
+  isolate concurrent writers, never hope.
+- **Worktree gate (G-WORKTREE)**: each parallel *mutating* agent runs in its own
+  `git worktree` on an `agent/<lane>` branch; the coordinator alone merges lanes
+  back, sequentially. Read-only fan-out may share the tree. No subagent runs
+  `git merge`/`checkout`/`reset` in a shared tree.
+- **Integration gate (G-INTEGRATE)**: after a slice merges back, acceptance requires
+  the *merged* tree to pass the project's integration shape (build, lockfile present
+  + consistent, declared tests/lints) — not merely "the worker's output exists." A
+  slice green in isolation but integration-broken (canonical: a `package.json` added
+  with no lockfile) is reopened, not accepted.
+- New reference `plugins/fable-it/skills/references/parallel-safety.md` — the
+  operational protocol (RUNLOCK schema, worktree fan-out/merge-back recipe,
+  stale-lock reclaim, integration check) that the three gates and `/launch`,
+  `/iterate` point at. Optional fail-open Claude Code preflight/stop hook noted.
+- Six binding tabletop goldens (T30–T35) exercising each gate, including an incident
+  replay proving the 2026-07-08 shared-`.git` collision is structurally prevented.
+
 ## [2.1.0] — 2026-07-05
 
 **Tiering that actually ships** — closes the three gaps that forced users to keep
@@ -114,6 +176,8 @@ three coherence guardrails, honest per-criterion report) bundled with `/launch`,
 `/iterate`, `/full-qa` and `/chrome-cdp-control`; multi-platform install via the
 root `SKILL.md`.
 
+[3.0.1]: https://github.com/DevOtts/fable-it/releases/tag/v3.0.1
+[3.0.0]: https://github.com/DevOtts/fable-it/releases/tag/v3.0.0
 [2.1.0]: https://github.com/DevOtts/fable-it/releases/tag/v2.1.0
 [2.0.0]: https://github.com/DevOtts/fable-it/releases/tag/v2.0.0
 [0.1.0]: https://github.com/DevOtts/fable-it/commits/cb1b17a

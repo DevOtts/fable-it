@@ -618,6 +618,8 @@ Based on the chosen approach, compose the prompt:
 
 #### For Sub-agents (parallel independent tasks)
 
+> **Safe parallel (v3):** if the sub-agents will *write to the repo*, isolate each in its own `git worktree`/`agent/<lane>` branch and merge back sequentially with an integration check per lane — never two writers on one `.git`. Read-only research agents may share the tree. Protocol: `../references/parallel-safety.md`.
+
 ```
 I'll now spawn [N] sub-agents to work on these tasks in parallel:
 
