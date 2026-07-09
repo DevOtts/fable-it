@@ -48,10 +48,10 @@
 
 
 > [!IMPORTANT]
-> **🪙 v2.1.0 (2026-07-05) — tiering that actually ships.** The canonical cheap/mid/top tier table now [ships inside the plugin](plugins/fable-it/skills/references/model-tiers.md) (v2.0 pointed installed hosts at a doc that isn't packaged), routing gains an **escalate-on-struggle** rule (a lower-tier subagent that fails its contract or thrashes gets its slice re-run one tier up — logged and disclosed; never pre-pay top tier "just in case"), and `/iterate` now tiers its own subagents. The conductor is whatever model you choose — "top tier" means *the session model*, never a hardcoded name. Details in the [CHANGELOG](CHANGELOG.md).
+> **🔒 v3.0.1 (2026-07-08) — safe parallel execution, now proven under contention.** A fable-it run that fans out parallel *mutating* agents — or shares a repo with another session — is now safe **by construction**: an atomic run lock ([G-INTERLOCK](plugins/fable-it/skills/references/parallel-safety.md)), one `git worktree` per mutating lane (G-WORKTREE), and a merged-tree integration gate (G-INTEGRATE), hardened in v3.0.1 with TOCTOU-free lock acquire, timer heartbeats, dead-owner-only reclaim, and crash-leftover lane cleanup. Validated by two A/B rounds against v2.1.0: identical deliverable quality single-lane, and a 60/46 rubric win on an adversarial parallel run — v2's failure mode (confident false completion with leftover worktrees) is structurally eliminated. Details in the [CHANGELOG](CHANGELOG.md).
 
 > [!IMPORTANT]
-> **🎉 v2.0.0 is out (2026-07-02) — from postures to gates.** The whole plugin was rebuilt from firsthand Fable 5 research: a 5-gate catalog, disk-backed run state, an evidence ledger that makes `VERIFIED` a lookup, a fresh-context verifier on every report, model-adaptive tuning for **Sonnet 5 + Opus 4.8**, cost-aware delegation routing, and optional hardened-mode hooks. Shipped against a 26-case binding test contract. Full details in the [CHANGELOG](CHANGELOG.md).
+> **🪙 v2.1.0 (2026-07-05) — tiering that actually ships.** The canonical cheap/mid/top tier table now [ships inside the plugin](plugins/fable-it/skills/references/model-tiers.md) (v2.0 pointed installed hosts at a doc that isn't packaged), routing gains an **escalate-on-struggle** rule (a lower-tier subagent that fails its contract or thrashes gets its slice re-run one tier up — logged and disclosed; never pre-pay top tier "just in case"), and `/iterate` now tiers its own subagents. The conductor is whatever model you choose — "top tier" means *the session model*, never a hardcoded name. Details in the [CHANGELOG](CHANGELOG.md).
 
 > [!NOTE]
 > **Optimized for long tasks** — research, browser tasks and mainly **vibe coding**.
@@ -64,6 +64,8 @@ When you watch Fable run a long, multi-step task, the thing that stands out isn'
 That's *behavior*, not IQ — and behavior transfers. fable-it v2 encodes that behavioral contract — captured firsthand from a live Fable 5 session and cross-checked against Anthropic's "Prompting Claude Fable 5" guide — as **checkable gates with disk-backed state**, model-adaptive for **Sonnet 5 and Opus 4.8**, so your model runs long, unattended jobs the way Fable does.
 
 **What v2 adds:** a 5-gate catalog replacing posture prose (turn-end, claim, state-change, phase-boundary, delegation) · an evidence ledger that makes `VERIFIED` a lookup, not a vibe · a fresh-context verifier that audits every report before it ships · a model-adaptive posture applied at Step 0 · cost-aware delegation routing · optional [hardened-mode hooks](plugins/fable-it/hooks/README.md) (opt-in, fail-open) that mechanically block promise-endings and evidence-free VERIFIED rows on Claude Code.
+
+**What v3 adds:** three gates that make parallel and multi-session runs safe **by construction** — an atomic `.taskstate/RUNLOCK` interlock (two runs can never co-mutate one tree), per-lane `git worktree` isolation for every mutating subagent, and a merged-tree integration gate so a slice that's green in isolation but breaks the build is reopened, not accepted. The full protocol lives in [`parallel-safety.md`](plugins/fable-it/skills/references/parallel-safety.md).
 
 ## The honest claim
 
@@ -251,7 +253,11 @@ Run window: 02:14 → 05:47  |  Approach: single session
 
 ## Status
 
-Honest, like the skill itself: v2 ships against a **26-case binding test contract** (`delivery/epics-fable-it-v2.md`) — tabletop-golden scenarios judged by fresh-context agents against transcripts registered before implementation, scripted grep-lints (`tests/lints/`), and executable hook unit tests (`plugins/fable-it/hooks/tests/`). Live-run `[REAL]` cases were exercised on Sonnet 5 and Opus 4.8 sessions; per-epic status lives in `delivery/STATUS.md`. It has not yet been hammered end-to-end in every environment. Validate the plugin locally before relying on it:
+Honest, like the skill itself: v2 ships against a **26-case binding test contract** (`delivery/epics-fable-it-v2.md`) — tabletop-golden scenarios judged by fresh-context agents against transcripts registered before implementation, scripted grep-lints (`tests/lints/`), and executable hook unit tests (`plugins/fable-it/hooks/tests/`). Live-run `[REAL]` cases were exercised on Sonnet 5 and Opus 4.8 sessions; per-epic status lives in `delivery/STATUS.md`.
+
+v3's parallel-safety protocol adds its own gate: **6 goldens (T30–T35)**, each independently judged by a fresh-context verifier with a citation-lint over the transcripts, plus two **A/B validation rounds against v2.1.0** — identical deliverable quality on a single-lane run, and a 60/46 rubric win on an adversarial parallel run where v2 confidently reported false completion. The interlock itself was exercised live: two concurrent fable-it sessions on this very repo, with the loser blocking and resuming cleanly.
+
+It has not yet been hammered end-to-end in every environment. Validate the plugin locally before relying on it:
 
 ```sh
 claude plugin validate ./plugins/fable-it

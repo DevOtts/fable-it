@@ -1,6 +1,7 @@
 # fable-it run artifacts (generated per run — never commit)
 FABLE-IT-REPORT.md
 SKILL-PUBLISH-REPORT.md
+.fable-it-reports/
 .taskstate/
 *.credentials
 .full.credentials

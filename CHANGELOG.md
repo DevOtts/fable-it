@@ -7,7 +7,10 @@ All notable changes to fable-it are documented here. The format follows
 ## [3.0.1] — 2026-07-08
 
 **Interlock hardening** — fixes two protocol races found in the post-release
-Fable 5 review (CONTRACT v1.1 amendment); gates unchanged.
+Fable 5 review (CONTRACT v1.1 amendment); gates unchanged. Validated by two
+A/B rounds against v2.1.0: identical deliverable quality on a single-lane
+run, and a 60/46 rubric win on an adversarial parallel run where v2 reported
+confident false completion with leftover worktrees.
 
 ### Fixed
 - **Atomic RUNLOCK acquisition**: the lock is created with exclusive-create
@@ -173,6 +176,8 @@ three coherence guardrails, honest per-criterion report) bundled with `/launch`,
 `/iterate`, `/full-qa` and `/chrome-cdp-control`; multi-platform install via the
 root `SKILL.md`.
 
+[3.0.1]: https://github.com/DevOtts/fable-it/releases/tag/v3.0.1
+[3.0.0]: https://github.com/DevOtts/fable-it/releases/tag/v3.0.0
 [2.1.0]: https://github.com/DevOtts/fable-it/releases/tag/v2.1.0
 [2.0.0]: https://github.com/DevOtts/fable-it/releases/tag/v2.0.0
 [0.1.0]: https://github.com/DevOtts/fable-it/commits/cb1b17a
