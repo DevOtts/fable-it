@@ -11,3 +11,6 @@ SKILL-PUBLISH-REPORT.md
 
 # OS / editor cruft
 .DS_Store
+
+# Private research — contains personal information, never publish
+docs/research/v3-research/
