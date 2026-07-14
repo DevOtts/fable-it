@@ -53,6 +53,9 @@
 > [!NOTE]
 > **Optimized for long tasks** — research, browser tasks and mainly **vibe coding**.
 
+> [!NOTE]
+> **The lifecycle family** — [`plan-it`](https://github.com/DevOtts/plan-it) plans → **fable-it** builds → [`review-it`](https://github.com/DevOtts/review-it) verifies. review-it is the QA front door: it runs the plan-phase Test Contract against what fable-it built (the independent review stage), enforces an 11-rule gate catalog against false-VERIFIED claims, and shares fable-it's evidence-ledger report format.
+
 <br>
 </div>
 
