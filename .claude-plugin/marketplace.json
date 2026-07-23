@@ -15,7 +15,7 @@
         "source": "github",
         "repo": "DevOtts/prompt-it"
       },
-      "version": "0.1.0",
+      "version": "0.2.0",
       "description": "Harness-aware intent compiler for the DevOtts lifecycle family — turns a rough ask into an optimized, context-grounded prompt routed to the right *-it skill with exactly the slots that target parses, nothing it already owns. Mode 1 compiles new-session prompts from a simple ask; Mode 2 reads review-it/QA findings and generates the evidence-cited continuation prompt. Never emits tiering, persistence, or verification-protocol content the routed target already owns.",
       "author": {
         "name": "DevOtts",
