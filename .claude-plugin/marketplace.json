@@ -10,6 +10,29 @@
   },
   "plugins": [
     {
+      "name": "prompt-it",
+      "source": {
+        "source": "github",
+        "repo": "DevOtts/prompt-it"
+      },
+      "version": "0.1.0",
+      "description": "Harness-aware intent compiler for the DevOtts lifecycle family — turns a rough ask into an optimized, context-grounded prompt routed to the right *-it skill with exactly the slots that target parses, nothing it already owns. Mode 1 compiles new-session prompts from a simple ask; Mode 2 reads review-it/QA findings and generates the evidence-cited continuation prompt. Never emits tiering, persistence, or verification-protocol content the routed target already owns.",
+      "author": {
+        "name": "DevOtts",
+        "url": "https://github.com/DevOtts"
+      },
+      "homepage": "https://github.com/DevOtts/prompt-it",
+      "license": "MIT",
+      "keywords": [
+        "prompt-engineering",
+        "intent-compiler",
+        "context-grounding",
+        "prompt-optimization",
+        "routing",
+        "claude-code"
+      ]
+    },
+    {
       "name": "fable-it",
       "source": "./plugins/fable-it",
       "description": "Make your model behave like Fable — single-command autonomous delivery orchestrator, model-adaptive for Sonnet 5 and Opus 4.8. Hand it a goal and a numbered Definition of Done and it runs the whole job to completion, conducting launch/iterate/full-qa/chrome-cdp with a 5-gate catalog, disk-backed run state, an evidence ledger (VERIFIED = lookup), a fresh-context verifier, and an honest per-criterion report.",
